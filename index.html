@@ -1,561 +1,428 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>소모품 관리 시스템</title>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; color: #111827; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>소모품 관리 시스템</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #333; }
 
-/* 인증 화면 */
-#auth-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 16px; }
-.auth-box { background: #fff; border-radius: 12px; padding: 32px; width: 100%; max-width: 400px; border: 1px solid #e5e7eb; }
-.auth-logo { text-align: center; margin-bottom: 24px; }
-.auth-logo .icon { width: 56px; height: 56px; background: #2563eb; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; margin-bottom: 12px; }
-.auth-logo h1 { font-size: 20px; font-weight: 700; }
-.auth-logo p { font-size: 13px; color: #6b7280; margin-top: 4px; }
-.auth-tabs { display: flex; border-bottom: 1px solid #e5e7eb; margin-bottom: 24px; }
-.auth-tab { flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 500; cursor: pointer; color: #6b7280; border-bottom: 2px solid transparent; }
-.auth-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #374151; }
-.form-group input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; outline: none; }
-.form-group input:focus { border-color: #2563eb; }
-.btn-primary { width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
-.btn-primary:hover { background: #1d4ed8; }
-.auth-error { background: #fef2f2; color: #dc2626; padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
-.auth-success { background: #f0fdf4; color: #16a34a; padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+    /* AUTH */
+    #authPage { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    .auth-box { background: #fff; border-radius: 12px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    .auth-box h1 { font-size: 22px; margin-bottom: 6px; }
+    .auth-box p { font-size: 13px; color: #888; margin-bottom: 24px; }
+    .tab-row { display: flex; margin-bottom: 24px; border-bottom: 2px solid #eee; }
+    .tab-btn { flex: 1; padding: 10px; background: none; border: none; font-size: 15px; cursor: pointer; color: #888; }
+    .tab-btn.active { color: #2563eb; border-bottom: 2px solid #2563eb; margin-bottom: -2px; font-weight: 600; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; margin-bottom: 6px; color: #555; }
+    .form-group input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; }
+    .form-group input:focus { border-color: #2563eb; }
+    .btn-primary { width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .msg { margin-top: 12px; font-size: 13px; text-align: center; }
+    .msg.error { color: #dc2626; }
+    .msg.success { color: #16a34a; }
 
-/* 메인 앱 */
-#app-screen { display: none; }
-.header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-.header h1 { font-size: 17px; font-weight: 700; }
-.header-right { display: flex; align-items: center; gap: 10px; }
-.user-info { font-size: 12px; color: #6b7280; }
-.btn-logout { padding: 6px 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; cursor: pointer; }
-.btn-logout:hover { background: #e5e7eb; }
+    /* MAIN */
+    #mainPage { display: none; max-width: 480px; margin: 0 auto; padding-bottom: 80px; }
+    .top-bar { background: #2563eb; color: #fff; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .top-bar h2 { font-size: 18px; }
+    .top-bar button { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .user-info { background: #eff6ff; padding: 10px 16px; font-size: 13px; color: #2563eb; }
 
-.tab-bar { display: flex; background: #fff; border-bottom: 1px solid #e5e7eb; }
-.tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: 500; cursor: pointer; color: #6b7280; border-bottom: 2px solid transparent; }
-.tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+    /* TABS */
+    .nav-tabs { display: flex; background: #fff; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10; }
+    .nav-tab { flex: 1; padding: 12px; text-align: center; font-size: 14px; cursor: pointer; color: #888; border: none; background: none; }
+    .nav-tab.active { color: #2563eb; border-bottom: 2px solid #2563eb; font-weight: 600; }
 
-.content { padding: 16px; max-width: 800px; margin: 0 auto; }
+    /* STOCK */
+    .section { padding: 16px; }
+    .stock-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .stock-header h3 { font-size: 16px; }
+    .btn-add { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+    .stock-card { background: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    .stock-info h4 { font-size: 15px; margin-bottom: 2px; }
+    .stock-info span { font-size: 12px; color: #888; }
+    .stock-qty { text-align: right; }
+    .stock-qty .qty { font-size: 22px; font-weight: 700; color: #2563eb; }
+    .stock-qty .unit { font-size: 12px; color: #888; }
+    .stock-qty.low .qty { color: #dc2626; }
+    .stock-actions { display: flex; gap: 6px; margin-top: 6px; }
+    .btn-in { background: #dcfce7; color: #16a34a; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn-out { background: #fee2e2; color: #dc2626; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn-edit { background: #f3f4f6; color: #555; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
 
-/* 재고 탭 */
-.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.top-bar h2 { font-size: 15px; font-weight: 600; }
-.btn-add { padding: 8px 16px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
-.btn-add:hover { background: #1d4ed8; }
+    /* LOG */
+    .log-item { background: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    .log-item .log-top { display: flex; justify-content: space-between; font-size: 14px; }
+    .log-item .log-name { font-weight: 600; }
+    .log-item .log-change { font-weight: 700; }
+    .log-item .log-change.in { color: #16a34a; }
+    .log-item .log-change.out { color: #dc2626; }
+    .log-item .log-bottom { font-size: 12px; color: #888; margin-top: 4px; display: flex; justify-content: space-between; }
 
-.stock-list { display: flex; flex-direction: column; gap: 8px; }
-.stock-item { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; }
-.stock-item.low { border-left: 3px solid #ef4444; }
-.item-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.item-name { font-size: 15px; font-weight: 600; }
-.item-qty { font-size: 18px; font-weight: 700; color: #2563eb; }
-.item-qty.low { color: #ef4444; }
-.item-row2 { display: flex; gap: 8px; }
-.btn-in { padding: 7px 14px; background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
-.btn-out { padding: 7px 14px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
-.btn-edit { padding: 7px 14px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; cursor: pointer; }
-.btn-del { padding: 7px 14px; background: #fff; color: #9ca3af; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; cursor: pointer; }
-.item-min { font-size: 11px; color: #9ca3af; margin-top: 8px; }
-
-/* 이력 탭 */
-.log-list { display: flex; flex-direction: column; gap: 6px; }
-.log-item { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
-.log-row1 { display: flex; justify-content: space-between; align-items: center; }
-.log-name { font-size: 14px; font-weight: 600; }
-.log-amount { font-size: 15px; font-weight: 700; }
-.log-amount.in { color: #16a34a; }
-.log-amount.out { color: #dc2626; }
-.log-row2 { display: flex; justify-content: space-between; margin-top: 4px; }
-.log-note { font-size: 12px; color: #6b7280; }
-.log-meta { font-size: 11px; color: #9ca3af; }
-
-.empty { text-align: center; padding: 40px 20px; color: #9ca3af; font-size: 14px; }
-
-/* 모달 */
-.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
-.modal-bg.open { display: flex; }
-.modal { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 360px; }
-.modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
-.modal-btns { display: flex; gap: 8px; margin-top: 20px; }
-.btn-cancel { flex: 1; padding: 10px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; cursor: pointer; }
-.btn-confirm { flex: 1; padding: 10px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
-.low-badge { font-size: 11px; background: #fef2f2; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
-</style>
+    /* MODAL */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; padding: 20px; }
+    .modal-bg.show { display: flex; }
+    .modal { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 360px; }
+    .modal h3 { font-size: 17px; margin-bottom: 16px; }
+    .modal input, .modal select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 12px; outline: none; }
+    .modal-btns { display: flex; gap: 8px; margin-top: 8px; }
+    .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-size: 15px; }
+    .btn-cancel { background: #f3f4f6; color: #555; }
+    .btn-confirm { background: #2563eb; color: #fff; }
+    .btn-delete { background: #fee2e2; color: #dc2626; }
+    .empty { text-align: center; color: #aaa; padding: 40px 0; font-size: 14px; }
+  </style>
 </head>
 <body>
 
-<!-- 인증 화면 -->
-<div id="auth-screen">
+<!-- 인증 페이지 -->
+<div id="authPage">
   <div class="auth-box">
-    <div class="auth-logo">
-      <div class="icon">S</div>
-      <h1>소모품 관리 시스템</h1>
-      <p>팀원 모두가 함께 관리하는 재고</p>
+    <h1>소모품 관리 시스템</h1>
+    <p>팀 재고를 함께 관리하세요</p>
+    <div class="tab-row">
+      <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">로그인</button>
+      <button class="tab-btn" id="tabSignup" onclick="switchTab('signup')">회원가입</button>
     </div>
-    <div class="auth-tabs">
-      <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</div>
-      <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</div>
-    </div>
-    <div class="auth-error" id="auth-error"></div>
-    <div class="auth-success" id="auth-success"></div>
 
     <!-- 로그인 폼 -->
-    <div id="form-login">
+    <div id="loginForm">
       <div class="form-group">
         <label>이메일</label>
-        <input type="email" id="login-email" placeholder="example@email.com">
+        <input type="email" id="loginEmail" placeholder="example@email.com">
       </div>
       <div class="form-group">
         <label>비밀번호</label>
-        <input type="password" id="login-pw" placeholder="비밀번호 입력">
+        <input type="password" id="loginPw" placeholder="비밀번호 입력">
       </div>
-      <button class="btn-primary" onclick="doLogin()">로그인</button>
+      <button class="btn-primary" onclick="login()">로그인</button>
+      <div class="msg" id="loginMsg"></div>
     </div>
 
     <!-- 회원가입 폼 -->
-    <div id="form-signup" style="display:none;">
+    <div id="signupForm" style="display:none;">
       <div class="form-group">
         <label>이름</label>
-        <input type="text" id="signup-name" placeholder="홍길동">
+        <input type="text" id="signupName" placeholder="홍길동">
       </div>
       <div class="form-group">
         <label>이메일</label>
-        <input type="email" id="signup-email" placeholder="example@email.com">
+        <input type="email" id="signupEmail" placeholder="example@email.com">
       </div>
       <div class="form-group">
         <label>비밀번호 (6자 이상)</label>
-        <input type="password" id="signup-pw" placeholder="비밀번호 입력">
+        <input type="password" id="signupPw" placeholder="비밀번호 입력">
       </div>
-      <button class="btn-primary" onclick="doSignup()">회원가입</button>
+      <button class="btn-primary" onclick="signup()">회원가입</button>
+      <div class="msg" id="signupMsg"></div>
     </div>
   </div>
 </div>
 
-<!-- 메인 앱 -->
-<div id="app-screen">
-  <div class="header">
-    <h1>소모품 관리</h1>
-    <div class="header-right">
-      <span class="user-info" id="user-email-display"></span>
-      <button class="btn-logout" onclick="doLogout()">로그아웃</button>
-    </div>
+<!-- 메인 페이지 -->
+<div id="mainPage">
+  <div class="top-bar">
+    <h2>소모품 관리</h2>
+    <button onclick="logout()">로그아웃</button>
   </div>
-  <div class="tab-bar">
-    <div class="tab active" id="tab-stock" onclick="switchTab('stock')">재고 현황</div>
-    <div class="tab" id="tab-log" onclick="switchTab('log')">입출고 이력</div>
+  <div class="user-info" id="userInfo"></div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="navStock" onclick="showTab('stock')">재고 현황</button>
+    <button class="nav-tab" id="navLog" onclick="showTab('log')">입출고 이력</button>
   </div>
 
   <!-- 재고 현황 -->
-  <div id="page-stock" class="content">
-    <div class="top-bar">
-      <h2>전체 재고</h2>
+  <div id="tabStock" class="section">
+    <div class="stock-header">
+      <h3>전체 재고</h3>
       <button class="btn-add" onclick="openAddModal()">+ 품목 추가</button>
     </div>
-    <div class="stock-list" id="stock-list">
-      <div class="empty">재고 품목이 없습니다.<br>+ 품목 추가 버튼을 눌러주세요.</div>
-    </div>
+    <div id="stockList"><div class="empty">품목이 없습니다</div></div>
   </div>
 
-  <!-- 이력 -->
-  <div id="page-log" class="content" style="display:none;">
-    <div class="top-bar">
-      <h2>입출고 이력</h2>
-    </div>
-    <div class="log-list" id="log-list">
-      <div class="empty">이력이 없습니다.</div>
-    </div>
+  <!-- 입출고 이력 -->
+  <div id="tabLog" class="section" style="display:none;">
+    <div class="stock-header"><h3>입출고 이력</h3></div>
+    <div id="logList"><div class="empty">이력이 없습니다</div></div>
   </div>
 </div>
 
 <!-- 품목 추가/수정 모달 -->
-<div class="modal-bg" id="modal-item">
+<div class="modal-bg" id="itemModal">
   <div class="modal">
-    <h3 id="modal-item-title">품목 추가</h3>
-    <div class="form-group">
-      <label>품목명</label>
-      <input type="text" id="item-name-input" placeholder="예: A4 용지">
-    </div>
-    <div class="form-group">
-      <label>현재 수량</label>
-      <input type="number" id="item-qty-input" placeholder="0" min="0">
-    </div>
-    <div class="form-group">
-      <label>단위</label>
-      <input type="text" id="item-unit-input" placeholder="예: 개, 박스, 권">
-    </div>
-    <div class="form-group">
-      <label>최소 수량 (이하면 부족 표시)</label>
-      <input type="number" id="item-min-input" placeholder="0" min="0">
-    </div>
+    <h3 id="itemModalTitle">품목 추가</h3>
+    <input type="hidden" id="itemId">
+    <input type="text" id="itemName" placeholder="품목명">
+    <input type="number" id="itemQty" placeholder="현재 수량" min="0">
+    <input type="text" id="itemUnit" placeholder="단위 (예: 개, 박스, 권)">
+    <input type="number" id="itemMin" placeholder="최소 수량 (부족 경고 기준)" min="0">
     <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal('modal-item')">취소</button>
+      <button class="btn-cancel" onclick="closeModal('itemModal')">취소</button>
+      <button class="btn-delete" id="btnDelete" onclick="deleteItem()" style="display:none;">삭제</button>
       <button class="btn-confirm" onclick="saveItem()">저장</button>
     </div>
   </div>
 </div>
 
-<!-- 입고/출고 모달 -->
-<div class="modal-bg" id="modal-inout">
+<!-- 입출고 모달 -->
+<div class="modal-bg" id="txModal">
   <div class="modal">
-    <h3 id="modal-inout-title">입고</h3>
-    <div class="form-group">
-      <label>수량</label>
-      <input type="number" id="inout-qty" placeholder="0" min="1">
-    </div>
-    <div class="form-group">
-      <label>메모 (선택)</label>
-      <input type="text" id="inout-note" placeholder="예: 비품실 보충">
-    </div>
+    <h3 id="txModalTitle">입고</h3>
+    <input type="hidden" id="txItemId">
+    <input type="hidden" id="txType">
+    <p style="font-size:14px;margin-bottom:12px;color:#555;" id="txItemName"></p>
+    <input type="number" id="txAmount" placeholder="수량 입력" min="1">
+    <input type="text" id="txNote" placeholder="메모 (선택사항)">
     <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal('modal-inout')">취소</button>
-      <button class="btn-confirm" onclick="saveInOut()">확인</button>
+      <button class="btn-cancel" onclick="closeModal('txModal')">취소</button>
+      <button class="btn-confirm" onclick="saveTx()">확인</button>
     </div>
   </div>
 </div>
 
 <script>
-var SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
+  var SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var currentUser = null;
+  var currentUserName = '';
 
-var currentUser = null;
-var editingItemId = null;
-var inoutItemId = null;
-var inoutType = null;
+  // 탭 전환
+  function switchTab(tab) {
+    document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
+    document.getElementById('tabLogin').className = tab === 'login' ? 'tab-btn active' : 'tab-btn';
+    document.getElementById('tabSignup').className = tab === 'signup' ? 'tab-btn active' : 'tab-btn';
+  }
 
-// Supabase API 호출 함수
-function api(method, path, body) {
-  var headers = {
-    'Content-Type': 'application/json',
-    'apikey': SUPABASE_KEY,
-    'Authorization': 'Bearer ' + SUPABASE_KEY
-  };
-  if (currentUser && currentUser.access_token) {
-    headers['Authorization'] = 'Bearer ' + currentUser.access_token;
-  }
-  var opts = { method: method, headers: headers };
-  if (body) {
-    opts.body = JSON.stringify(body);
-  }
-  return fetch(SUPABASE_URL + path, opts).then(function(r) {
-    if (r.status === 204) {
-      return {};
+  // 회원가입
+  async function signup() {
+    var name = document.getElementById('signupName').value.trim();
+    var email = document.getElementById('signupEmail').value.trim();
+    var pw = document.getElementById('signupPw').value;
+    var msg = document.getElementById('signupMsg');
+    if (!name || !email || !pw) {
+      msg.textContent = '모든 항목을 입력해주세요.';
+      msg.className = 'msg error';
+      return;
     }
-    return r.json();
-  });
-}
-
-// Auth API 호출 함수
-function authApi(path, body) {
-  return fetch(SUPABASE_URL + '/auth/v1' + path, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY
-    },
-    body: JSON.stringify(body)
-  }).then(function(r) {
-    return r.json();
-  });
-}
-
-// 탭 전환
-function switchAuthTab(tab) {
-  hideError();
-  if (tab === 'login') {
-    document.getElementById('tab-login').classList.add('active');
-    document.getElementById('tab-signup').classList.remove('active');
-    document.getElementById('form-login').style.display = 'block';
-    document.getElementById('form-signup').style.display = 'none';
-  } else {
-    document.getElementById('tab-signup').classList.add('active');
-    document.getElementById('tab-login').classList.remove('active');
-    document.getElementById('form-signup').style.display = 'block';
-    document.getElementById('form-login').style.display = 'none';
+    msg.textContent = '처리 중...';
+    msg.className = 'msg';
+    var res = await sb.auth.signUp({ email: email, password: pw, options: { data: { name: name } } });
+    if (res.error) {
+      msg.textContent = res.error.message;
+      msg.className = 'msg error';
+    } else {
+      msg.textContent = '회원가입 완료! 로그인해주세요.';
+      msg.className = 'msg success';
+      setTimeout(function() { switchTab('login'); }, 1500);
+    }
   }
-}
 
-function showError(msg) {
-  var el = document.getElementById('auth-error');
-  el.textContent = msg;
-  el.style.display = 'block';
-  document.getElementById('auth-success').style.display = 'none';
-}
-
-function showSuccess(msg) {
-  var el = document.getElementById('auth-success');
-  el.textContent = msg;
-  el.style.display = 'block';
-  document.getElementById('auth-error').style.display = 'none';
-}
-
-function hideError() {
-  document.getElementById('auth-error').style.display = 'none';
-  document.getElementById('auth-success').style.display = 'none';
-}
-
-// 로그인
-function doLogin() {
-  var email = document.getElementById('login-email').value.trim();
-  var pw = document.getElementById('login-pw').value;
-  if (!email || !pw) {
-    showError('이메일과 비밀번호를 입력해주세요.');
-    return;
+  // 로그인
+  async function login() {
+    var email = document.getElementById('loginEmail').value.trim();
+    var pw = document.getElementById('loginPw').value;
+    var msg = document.getElementById('loginMsg');
+    if (!email || !pw) {
+      msg.textContent = '이메일과 비밀번호를 입력해주세요.';
+      msg.className = 'msg error';
+      return;
+    }
+    msg.textContent = '로그인 중...';
+    msg.className = 'msg';
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) {
+      msg.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      msg.className = 'msg error';
+    } else {
+      currentUser = res.data.user;
+      currentUserName = (currentUser.user_metadata && currentUser.user_metadata.name) ? currentUser.user_metadata.name : currentUser.email;
+      showMain();
+    }
   }
-  authApi('/token?grant_type=password', { email: email, password: pw })
-    .then(function(data) {
-      if (data.error || data.error_description) {
-        showError('로그인 실패: 이메일 또는 비밀번호를 확인해주세요.');
-        return;
-      }
-      currentUser = data;
-      startApp(data.user.email);
-    })
-    .catch(function() {
-      showError('네트워크 오류가 발생했습니다.');
-    });
-}
 
-// 회원가입
-function doSignup() {
-  var name = document.getElementById('signup-name').value.trim();
-  var email = document.getElementById('signup-email').value.trim();
-  var pw = document.getElementById('signup-pw').value;
-  if (!name || !email || !pw) {
-    showError('모든 항목을 입력해주세요.');
-    return;
+  // 로그아웃
+  async function logout() {
+    await sb.auth.signOut();
+    currentUser = null;
+    document.getElementById('authPage').style.display = 'flex';
+    document.getElementById('mainPage').style.display = 'none';
   }
-  if (pw.length < 6) {
-    showError('비밀번호는 6자 이상이어야 합니다.');
-    return;
-  }
-  authApi('/signup', { email: email, password: pw, data: { name: name } })
-    .then(function(data) {
-      if (data.error || data.error_description) {
-        showError('회원가입 실패: ' + (data.error_description || data.error || ''));
-        return;
-      }
-      showSuccess('회원가입 완료! 이메일 인증 없이 바로 로그인하세요.');
-      switchAuthTab('login');
-      document.getElementById('login-email').value = email;
-    })
-    .catch(function() {
-      showError('네트워크 오류가 발생했습니다.');
-    });
-}
 
-// 로그아웃
-function doLogout() {
-  currentUser = null;
-  document.getElementById('app-screen').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
-}
-
-// 앱 시작
-function startApp(email) {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app-screen').style.display = 'block';
-  document.getElementById('user-email-display').textContent = email;
-  loadStock();
-}
-
-// 탭 전환
-function switchTab(tab) {
-  document.getElementById('tab-stock').classList.remove('active');
-  document.getElementById('tab-log').classList.remove('active');
-  document.getElementById('page-stock').style.display = 'none';
-  document.getElementById('page-log').style.display = 'none';
-  if (tab === 'stock') {
-    document.getElementById('tab-stock').classList.add('active');
-    document.getElementById('page-stock').style.display = 'block';
+  // 메인 화면 표시
+  function showMain() {
+    document.getElementById('authPage').style.display = 'none';
+    document.getElementById('mainPage').style.display = 'block';
+    document.getElementById('userInfo').textContent = currentUserName + ' 님으로 로그인 중';
     loadStock();
-  } else {
-    document.getElementById('tab-log').classList.add('active');
-    document.getElementById('page-log').style.display = 'block';
-    loadLogs();
+    loadLog();
   }
-}
 
-// 재고 불러오기
-function loadStock() {
-  api('GET', '/rest/v1/stock_items?select=*&order=name.asc', null)
-    .then(function(data) {
-      var list = document.getElementById('stock-list');
-      if (!Array.isArray(data) || data.length === 0) {
-        list.innerHTML = '<div class="empty">재고 품목이 없습니다.<br>+ 품목 추가 버튼을 눌러주세요.</div>';
-        return;
-      }
-      var html = '';
-      for (var i = 0; i < data.length; i++) {
-        var item = data[i];
-        var isLow = item.quantity <= item.min_quantity;
-        html += '<div class="stock-item' + (isLow ? ' low' : '') + '">';
-        html += '<div class="item-row1">';
-        html += '<span class="item-name">' + esc(item.name) + (isLow ? ' <span class="low-badge">부족</span>' : '') + '</span>';
-        html += '<span class="item-qty' + (isLow ? ' low' : '') + '">' + item.quantity + ' ' + esc(item.unit) + '</span>';
-        html += '</div>';
-        html += '<div class="item-row2">';
-        html += '<button class="btn-in" onclick="openInOut('' + item.id + '', 'in')">+ 입고</button>';
-        html += '<button class="btn-out" onclick="openInOut('' + item.id + '', 'out')">- 출고</button>';
-        html += '<button class="btn-edit" onclick="openEditModal('' + item.id + '', '' + esc(item.name) + '', ' + item.quantity + ', '' + esc(item.unit) + '', ' + item.min_quantity + ')">수정</button>';
-        html += '<button class="btn-del" onclick="deleteItem('' + item.id + '')">삭제</button>';
-        html += '</div>';
-        html += '<div class="item-min">최소 수량: ' + item.min_quantity + ' ' + esc(item.unit) + '</div>';
-        html += '</div>';
-      }
-      list.innerHTML = html;
-    });
-}
-
-// 이력 불러오기
-function loadLogs() {
-  api('GET', '/rest/v1/stock_logs?select=*&order=created_at.desc&limit=100', null)
-    .then(function(data) {
-      var list = document.getElementById('log-list');
-      if (!Array.isArray(data) || data.length === 0) {
-        list.innerHTML = '<div class="empty">이력이 없습니다.</div>';
-        return;
-      }
-      var html = '';
-      for (var i = 0; i < data.length; i++) {
-        var log = data[i];
-        var isIn = log.change_type === 'in';
-        var dt = new Date(log.created_at);
-        var dtStr = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
-        html += '<div class="log-item">';
-        html += '<div class="log-row1">';
-        html += '<span class="log-name">' + esc(log.item_name || '') + '</span>';
-        html += '<span class="log-amount ' + (isIn ? 'in' : 'out') + '">' + (isIn ? '+' : '-') + Math.abs(log.change_amount) + '</span>';
-        html += '</div>';
-        html += '<div class="log-row2">';
-        html += '<span class="log-note">' + (log.note ? esc(log.note) : '') + (log.user_email ? ' · ' + esc(log.user_email) : '') + '</span>';
-        html += '<span class="log-meta">' + dtStr + '</span>';
-        html += '</div>';
-        html += '</div>';
-      }
-      list.innerHTML = html;
-    });
-}
-
-function pad(n) {
-  return n < 10 ? '0' + n : '' + n;
-}
-
-function esc(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-// 모달 열기/닫기
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-function openAddModal() {
-  editingItemId = null;
-  document.getElementById('modal-item-title').textContent = '품목 추가';
-  document.getElementById('item-name-input').value = '';
-  document.getElementById('item-qty-input').value = '';
-  document.getElementById('item-unit-input').value = '개';
-  document.getElementById('item-min-input').value = '0';
-  document.getElementById('modal-item').classList.add('open');
-}
-
-function openEditModal(id, name, qty, unit, min) {
-  editingItemId = id;
-  document.getElementById('modal-item-title').textContent = '품목 수정';
-  document.getElementById('item-name-input').value = name;
-  document.getElementById('item-qty-input').value = qty;
-  document.getElementById('item-unit-input').value = unit;
-  document.getElementById('item-min-input').value = min;
-  document.getElementById('modal-item').classList.add('open');
-}
-
-function saveItem() {
-  var name = document.getElementById('item-name-input').value.trim();
-  var qty = parseInt(document.getElementById('item-qty-input').value) || 0;
-  var unit = document.getElementById('item-unit-input').value.trim() || '개';
-  var min = parseInt(document.getElementById('item-min-input').value) || 0;
-  if (!name) {
-    alert('품목명을 입력해주세요.');
-    return;
+  // 탭 전환 (메인)
+  function showTab(tab) {
+    document.getElementById('tabStock').style.display = tab === 'stock' ? 'block' : 'none';
+    document.getElementById('tabLog').style.display = tab === 'log' ? 'block' : 'none';
+    document.getElementById('navStock').className = tab === 'stock' ? 'nav-tab active' : 'nav-tab';
+    document.getElementById('navLog').className = tab === 'log' ? 'nav-tab active' : 'nav-tab';
+    if (tab === 'log') loadLog();
   }
-  if (editingItemId) {
-    api('PATCH', '/rest/v1/stock_items?id=eq.' + editingItemId, { name: name, quantity: qty, unit: unit, min_quantity: min })
-      .then(function() {
-        closeModal('modal-item');
-        loadStock();
-      });
-  } else {
-    api('POST', '/rest/v1/stock_items', { name: name, quantity: qty, unit: unit, min_quantity: min })
-      .then(function() {
-        closeModal('modal-item');
-        loadStock();
-      });
-  }
-}
 
-function deleteItem(id) {
-  if (!confirm('삭제하시겠습니까?')) {
-    return;
+  // 재고 목록 로드
+  async function loadStock() {
+    var res = await sb.from('stock_items').select('*').order('name');
+    var list = document.getElementById('stockList');
+    if (!res.data || res.data.length === 0) {
+      list.innerHTML = '<div class="empty">품목이 없습니다<br>+ 품목 추가 버튼을 눌러주세요</div>';
+      return;
+    }
+    list.innerHTML = res.data.map(function(item) {
+      var low = item.quantity <= item.min_quantity ? ' low' : '';
+      return '<div class="stock-card">' +
+        '<div class="stock-info">' +
+          '<h4>' + item.name + '</h4>' +
+          '<span>최소 기준: ' + item.min_quantity + ' ' + item.unit + '</span>' +
+          '<div class="stock-actions">' +
+            '<button class="btn-in" onclick="openTx('' + item.id + '','' + item.name + '','in')">입고</button>' +
+            '<button class="btn-out" onclick="openTx('' + item.id + '','' + item.name + '','out')">출고</button>' +
+            '<button class="btn-edit" onclick="openEditModal('' + item.id + '','' + item.name + '',' + item.quantity + ','' + item.unit + '',' + item.min_quantity + ')">수정</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="stock-qty' + low + '">' +
+          '<div class="qty">' + item.quantity + '</div>' +
+          '<div class="unit">' + item.unit + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
   }
-  api('DELETE', '/rest/v1/stock_items?id=eq.' + id, null)
-    .then(function() {
-      loadStock();
-    });
-}
 
-// 입고/출고 모달
-function openInOut(id, type) {
-  inoutItemId = id;
-  inoutType = type;
-  document.getElementById('modal-inout-title').textContent = type === 'in' ? '입고' : '출고';
-  document.getElementById('inout-qty').value = '';
-  document.getElementById('inout-note').value = '';
-  document.getElementById('modal-inout').classList.add('open');
-}
-
-function saveInOut() {
-  var qty = parseInt(document.getElementById('inout-qty').value);
-  var note = document.getElementById('inout-note').value.trim();
-  if (!qty || qty <= 0) {
-    alert('수량을 입력해주세요.');
-    return;
+  // 이력 로드
+  async function loadLog() {
+    var res = await sb.from('stock_logs').select('*').order('created_at', { ascending: false }).limit(50);
+    var list = document.getElementById('logList');
+    if (!res.data || res.data.length === 0) {
+      list.innerHTML = '<div class="empty">이력이 없습니다</div>';
+      return;
+    }
+    list.innerHTML = res.data.map(function(log) {
+      var isIn = log.change_amount > 0;
+      var sign = isIn ? '+' : '';
+      var cls = isIn ? 'in' : 'out';
+      var d = new Date(log.created_at);
+      var dateStr = d.getFullYear() + '.' + (d.getMonth()+1) + '.' + d.getDate() + ' ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0');
+      return '<div class="log-item">' +
+        '<div class="log-top">' +
+          '<span class="log-name">' + (log.item_name || '') + '</span>' +
+          '<span class="log-change ' + cls + '">' + sign + log.change_amount + '</span>' +
+        '</div>' +
+        '<div class="log-bottom">' +
+          '<span>' + (log.note || '') + '</span>' +
+          '<span>' + dateStr + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
   }
-  // 현재 수량 조회
-  api('GET', '/rest/v1/stock_items?id=eq.' + inoutItemId + '&select=*', null)
-    .then(function(data) {
-      if (!data || !data[0]) {
-        return;
-      }
-      var item = data[0];
-      var newQty = inoutType === 'in' ? item.quantity + qty : item.quantity - qty;
-      if (newQty < 0) {
-        alert('재고가 부족합니다. 현재 수량: ' + item.quantity);
-        return;
-      }
-      // 수량 업데이트
-      api('PATCH', '/rest/v1/stock_items?id=eq.' + inoutItemId, { quantity: newQty })
-        .then(function() {
-          // 이력 저장
-          var userEmail = currentUser && currentUser.user ? currentUser.user.email : '';
-          api('POST', '/rest/v1/stock_logs', {
-            item_id: inoutItemId,
-            item_name: item.name,
-            change_amount: inoutType === 'in' ? qty : -qty,
-            change_type: inoutType,
-            note: note,
-            user_email: userEmail
-          }).then(function() {
-            closeModal('modal-inout');
-            loadStock();
-          });
-        });
-    });
-}
+
+  // 품목 추가 모달
+  function openAddModal() {
+    document.getElementById('itemModalTitle').textContent = '품목 추가';
+    document.getElementById('itemId').value = '';
+    document.getElementById('itemName').value = '';
+    document.getElementById('itemQty').value = '';
+    document.getElementById('itemUnit').value = '개';
+    document.getElementById('itemMin').value = '0';
+    document.getElementById('btnDelete').style.display = 'none';
+    document.getElementById('itemModal').className = 'modal-bg show';
+  }
+
+  // 품목 수정 모달
+  function openEditModal(id, name, qty, unit, min) {
+    document.getElementById('itemModalTitle').textContent = '품목 수정';
+    document.getElementById('itemId').value = id;
+    document.getElementById('itemName').value = name;
+    document.getElementById('itemQty').value = qty;
+    document.getElementById('itemUnit').value = unit;
+    document.getElementById('itemMin').value = min;
+    document.getElementById('btnDelete').style.display = 'block';
+    document.getElementById('itemModal').className = 'modal-bg show';
+  }
+
+  // 품목 저장
+  async function saveItem() {
+    var id = document.getElementById('itemId').value;
+    var name = document.getElementById('itemName').value.trim();
+    var qty = parseInt(document.getElementById('itemQty').value) || 0;
+    var unit = document.getElementById('itemUnit').value.trim() || '개';
+    var min = parseInt(document.getElementById('itemMin').value) || 0;
+    if (!name) { alert('품목명을 입력해주세요.'); return; }
+    if (id) {
+      await sb.from('stock_items').update({ name: name, quantity: qty, unit: unit, min_quantity: min }).eq('id', id);
+    } else {
+      await sb.from('stock_items').insert({ name: name, quantity: qty, unit: unit, min_quantity: min, user_id: currentUser.id });
+    }
+    closeModal('itemModal');
+    loadStock();
+  }
+
+  // 품목 삭제
+  async function deleteItem() {
+    var id = document.getElementById('itemId').value;
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    await sb.from('stock_items').delete().eq('id', id);
+    closeModal('itemModal');
+    loadStock();
+  }
+
+  // 입출고 모달
+  function openTx(itemId, itemName, type) {
+    document.getElementById('txItemId').value = itemId;
+    document.getElementById('txItemName').textContent = itemName;
+    document.getElementById('txType').value = type;
+    document.getElementById('txModalTitle').textContent = type === 'in' ? '입고' : '출고';
+    document.getElementById('txAmount').value = '';
+    document.getElementById('txNote').value = '';
+    document.getElementById('txModal').className = 'modal-bg show';
+  }
+
+  // 입출고 저장
+  async function saveTx() {
+    var itemId = document.getElementById('txItemId').value;
+    var type = document.getElementById('txType').value;
+    var amount = parseInt(document.getElementById('txAmount').value);
+    var note = document.getElementById('txNote').value.trim();
+    var itemName = document.getElementById('txItemName').textContent;
+    if (!amount || amount <= 0) { alert('수량을 입력해주세요.'); return; }
+    var change = type === 'in' ? amount : -amount;
+    var itemRes = await sb.from('stock_items').select('quantity').eq('id', itemId).single();
+    var newQty = (itemRes.data ? itemRes.data.quantity : 0) + change;
+    if (newQty < 0) { alert('재고가 부족합니다.'); return; }
+    await sb.from('stock_items').update({ quantity: newQty }).eq('id', itemId);
+    await sb.from('stock_logs').insert({ item_id: itemId, item_name: itemName, change_amount: change, note: note, user_id: currentUser.id });
+    closeModal('txModal');
+    loadStock();
+    loadLog();
+  }
+
+  // 모달 닫기
+  function closeModal(id) {
+    document.getElementById(id).className = 'modal-bg';
+  }
+
+  // 세션 확인
+  sb.auth.getSession().then(function(res) {
+    if (res.data && res.data.session) {
+      currentUser = res.data.session.user;
+      currentUserName = (currentUser.user_metadata && currentUser.user_metadata.name) ? currentUser.user_metadata.name : currentUser.email;
+      showMain();
+    }
+  });
 </script>
 </body>
 </html>
