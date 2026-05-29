@@ -2,584 +2,1678 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>소모품 관리</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#2563EB">
+<!-- PWA: iOS -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="소모품관리">
+<link rel="apple-touch-icon" href="icon-192.png">
+<!-- PWA Manifest -->
 <link rel="manifest" href="manifest.json">
+<title>소모품 관리 시스템</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Supabase JS v2 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #333; }
-.hidden { display: none !important; }
-.page { min-height: 100vh; padding: 20px; }
+/* ── 기본 리셋 & 폰트 ─────────────────────────── */
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 
-/* 인증 페이지 */
-#authPage { background: #fff; max-width: 400px; margin: 0 auto; padding-top: 60px; }
-.auth-title { font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 8px; }
-.auth-sub { text-align: center; color: #888; margin-bottom: 30px; font-size: 14px; }
-.tab-btns { display: flex; border-bottom: 2px solid #eee; margin-bottom: 24px; }
-.tab-btn { flex: 1; padding: 10px; background: none; border: none; cursor: pointer; font-size: 15px; color: #888; }
-.tab-btn.active { color: #2563eb; border-bottom: 2px solid #2563eb; margin-bottom: -2px; font-weight: bold; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; }
-.form-group input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; }
-.form-group input:focus { border-color: #2563eb; }
-.btn-primary { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; }
-.btn-primary:hover { background: #1d4ed8; }
-.msg { text-align: center; font-size: 13px; margin-top: 12px; min-height: 20px; }
-.msg.error { color: #e53e3e; }
-.msg.success { color: #38a169; }
+/* ── PWA 안전 영역 패딩 ──────────────────────── */
+.safe-top    { padding-top:    env(safe-area-inset-top);    }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-/* 메인 앱 */
-#appPage { max-width: 600px; margin: 0 auto; }
-.app-header { background: #2563eb; color: white; padding: 16px 20px; border-radius: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
-.app-header h1 { font-size: 18px; }
-.btn-logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
-.btn-logout:hover { background: rgba(255,255,255,0.3); }
+/* ── 탭 패널 전환 ────────────────────────────── */
+.tab-panel   { display: none; }
+.tab-panel.active { display: block; }
 
-.nav-tabs { display: flex; background: white; border-radius: 10px; padding: 4px; margin-bottom: 16px; gap: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-.nav-tab { flex: 1; padding: 8px 4px; background: none; border: none; cursor: pointer; font-size: 13px; color: #888; border-radius: 7px; }
-.nav-tab.active { background: #2563eb; color: white; font-weight: bold; }
+/* ── 하단 네비게이션 활성 탭 ─────────────────── */
+.nav-btn        { transition: color .15s, transform .1s; }
+.nav-btn.active { color: #2563EB; }
+.nav-btn.active svg { transform: scale(1.15); }
 
-.card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-.card-title { font-size: 16px; font-weight: bold; margin-bottom: 12px; }
+/* ── 데스크탑 상단 탭 ─────────────────────────── */
+.desk-tab        { border-bottom: 3px solid transparent; transition: .15s; }
+.desk-tab.active { border-bottom-color: white; }
 
-.add-form { display: flex; gap: 8px; flex-wrap: wrap; }
-.add-form input { flex: 1; min-width: 120px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-.add-form input:focus { border-color: #2563eb; }
-.btn-add { padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; }
-.btn-add:hover { background: #1d4ed8; }
+/* ── 재고 상태 행 색상 ───────────────────────── */
+.row-critical { background: #FEF2F2 !important; }
+.row-warning  { background: #FFFBEB !important; }
+.row-empty    { background: #FEF2F2 !important; }
 
-.item-list { display: flex; flex-direction: column; gap: 8px; }
-.item-row { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #f9fafb; border-radius: 8px; }
-.item-info { flex: 1; }
-.item-name { font-size: 15px; font-weight: 500; }
-.item-qty { font-size: 13px; color: #888; margin-top: 2px; }
-.item-qty.low { color: #e53e3e; font-weight: bold; }
-.item-actions { display: flex; gap: 6px; align-items: center; }
-.qty-btn { width: 28px; height: 28px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
-.qty-btn:hover { background: #f0f0f0; }
-.btn-del { padding: 4px 10px; background: #fee2e2; color: #e53e3e; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; }
-.btn-del:hover { background: #fecaca; }
+/* ── 재고 바 애니메이션 ──────────────────────── */
+.stock-bar-fill { transition: width .4s ease; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+.blink { animation: blink 1.5s infinite; }
 
-.log-list { display: flex; flex-direction: column; gap: 8px; }
-.log-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f9fafb; border-radius: 8px; }
-.log-name { font-size: 14px; font-weight: 500; }
-.log-detail { font-size: 12px; color: #888; margin-top: 2px; }
-.log-change { font-size: 15px; font-weight: bold; }
-.log-change.plus { color: #38a169; }
-.log-change.minus { color: #e53e3e; }
+/* ── 토스트 ──────────────────────────────────── */
+.toast { animation: slideIn .25s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateX(1rem)} to{opacity:1;transform:none} }
 
-.empty { text-align: center; color: #aaa; padding: 30px; font-size: 14px; }
-.loading { text-align: center; color: #aaa; padding: 20px; }
+/* ── 스크롤바 숨기기 (모바일) ─────────────────── */
+.no-scroll::-webkit-scrollbar { display: none; }
+.no-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
-.alert-box { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-.alert-box p { font-size: 13px; color: #856404; }
+/* ── 입력 포커스 링 ──────────────────────────── */
+input:focus, select:focus, textarea:focus {
+  outline: none; ring: 0;
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+
+/* ── 모바일 콘텐츠 하단 여백 (하단 네비게이션 높이) ─ */
+@media (max-width: 767px) {
+  .main-pad { padding-bottom: 5.5rem; }
+}
+/* ── 상단 헤더 높이 보정 ─────────────────────── */
+.content-offset { padding-top: 0; }
+@media (min-width: 768px) {
+  .content-offset { padding-top: 0; }
+}
 </style>
 </head>
-<body>
-
-<!-- 인증 페이지 -->
-<div id="authPage" class="page">
-  <div class="auth-title">소모품 관리</div>
-  <div class="auth-sub">팀 소모품을 스마트하게 관리하세요</div>
-
-  <div class="tab-btns">
-    <button class="tab-btn active" id="loginTabBtn" onclick="showAuthTab('login')">로그인</button>
-    <button class="tab-btn" id="signupTabBtn" onclick="showAuthTab('signup')">회원가입</button>
-  </div>
-
-  <!-- 로그인 폼 -->
-  <div id="loginForm">
-    <div class="form-group">
-      <label>이메일</label>
-      <input type="email" id="loginEmail" placeholder="이메일 입력">
-    </div>
-    <div class="form-group">
-      <label>비밀번호</label>
-      <input type="password" id="loginPw" placeholder="비밀번호 입력">
-    </div>
-    <button class="btn-primary" onclick="doLogin()">로그인</button>
-    <div class="msg" id="loginMsg"></div>
-  </div>
-
-  <!-- 회원가입 폼 -->
-  <div id="signupForm" class="hidden">
-    <div class="form-group">
-      <label>이메일</label>
-      <input type="email" id="signupEmail" placeholder="이메일 입력">
-    </div>
-    <div class="form-group">
-      <label>비밀번호 (6자 이상)</label>
-      <input type="password" id="signupPw" placeholder="비밀번호 입력">
-    </div>
-    <button class="btn-primary" onclick="doSignup()">회원가입</button>
-    <div class="msg" id="signupMsg"></div>
-  </div>
-</div>
-
-<!-- 메인 앱 페이지 -->
-<div id="appPage" class="page hidden">
-  <div class="app-header">
-    <h1>소모품 관리</h1>
-    <button class="btn-logout" onclick="doLogout()">로그아웃</button>
-  </div>
-
-  <div class="nav-tabs">
-    <button class="nav-tab active" id="tab_stock" onclick="showAppTab('stock')">재고현황</button>
-    <button class="nav-tab" id="tab_add" onclick="showAppTab('add')">추가/사용</button>
-    <button class="nav-tab" id="tab_log" onclick="showAppTab('log')">사용기록</button>
-  </div>
-
-  <!-- 재고현황 탭 -->
-  <div id="tabStock">
-    <div id="alertBox" class="hidden"></div>
-    <div class="card">
-      <div class="card-title">전체 재고</div>
-      <div id="stockList" class="item-list">
-        <div class="loading">불러오는 중...</div>
+<body class="bg-gray-100 min-h-screen">
+<!-- ================================================================
+     설정 모달 (최초 1회: Supabase 연결 정보 입력)
+================================================================ -->
+<div id="setupModal"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.65)">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <!-- 로고 -->
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M20 7l-8-4-8 4m16 0v10l-8 4m0-10L4 7m8 10V11"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">소모품 관리 시스템</h1>
+        <p class="text-sm text-gray-500">Supabase 연결 설정</p>
       </div>
     </div>
-  </div>
 
-  <!-- 추가/사용 탭 -->
-  <div id="tabAdd" class="hidden">
-    <div class="card">
-      <div class="card-title">품목 추가</div>
-      <div class="add-form">
-        <input type="text" id="newItemName" placeholder="품목명">
-        <input type="number" id="newItemQty" placeholder="수량" min="0" style="max-width:90px">
-        <input type="text" id="newItemUnit" placeholder="단위(개)" style="max-width:70px">
-        <input type="number" id="newItemMin" placeholder="최소수량" min="0" style="max-width:90px">
-        <button class="btn-add" onclick="addItem()">추가</button>
-      </div>
-      <div class="msg" id="addMsg" style="text-align:left;margin-top:8px;"></div>
+    <!-- 안내 박스 -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-sm text-blue-800">
+      <b>설정 방법</b><br>
+      Supabase 프로젝트 대시보드 → Settings → API 에서<br>
+      Project URL과 anon public key를 복사하세요.
     </div>
 
-    <div class="card">
-      <div class="card-title">수량 조정</div>
-      <div id="adjustList" class="item-list">
-        <div class="loading">불러오는 중...</div>
+    <div class="space-y-4">
+      <!-- URL -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Supabase Project URL <span class="text-red-500">*</span>
+        </label>
+        <input id="cfgUrl" type="url"
+          placeholder="https://xxxxxxxxxxxx.supabase.co"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
       </div>
-    </div>
-  </div>
+      <!-- Anon Key -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Anon Public Key <span class="text-red-500">*</span>
+        </label>
+        <input id="cfgKey" type="password"
+          placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono">
+      </div>
+      <!-- 사용자 이름 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">내 이름 (처리자 표시용)</label>
+        <input id="cfgUser" type="text" placeholder="홍길동"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
+      </div>
 
-  <!-- 사용기록 탭 -->
-  <div id="tabLog" class="hidden">
-    <div class="card">
-      <div class="card-title">최근 사용기록</div>
-      <div id="logList" class="log-list">
-        <div class="loading">불러오는 중...</div>
-      </div>
+      <!-- 에러 메시지 -->
+      <p id="setupError" class="text-sm text-red-600 hidden"></p>
+
+      <!-- 연결 버튼 -->
+      <button onclick="connectAndSave()"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold
+               rounded-xl py-3 text-sm transition flex items-center justify-center gap-2">
+        <span id="connectBtnText">연결 및 시작하기</span>
+        <svg id="connectSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"/>
+          <path class="opacity-75" fill="white"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+        </svg>
+      </button>
     </div>
   </div>
 </div>
+<!-- ================================================================
+     메인 앱 (연결 완료 후 표시)
+================================================================ -->
+<div id="app" class="hidden min-h-screen flex flex-col">
 
+  <!-- ── 헤더 ─────────────────────────────────────────────── -->
+  <header class="bg-blue-600 text-white sticky top-0 z-40 safe-top shadow-md">
+    <div class="flex items-center justify-between px-4 h-14">
+      <!-- 로고 -->
+      <div class="flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M20 7l-8-4-8 4m16 0v10l-8 4m0-10L4 7m8 10V11"/>
+        </svg>
+        <span class="font-bold text-lg tracking-tight">소모품 관리</span>
+      </div>
+      <!-- 우측 아이콘들 -->
+      <div class="flex items-center gap-2">
+        <!-- 동기화 상태 -->
+        <div id="syncDot" title="동기화 상태"
+          class="w-2.5 h-2.5 rounded-full bg-yellow-400 transition-colors"
+          title="연결 중..."></div>
+        <!-- 오프라인 배지 -->
+        <span id="offlineBadge"
+          class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+          오프라인
+        </span>
+        <!-- 알림 벨 -->
+        <button onclick="openAlertModal()" class="relative p-1.5 hover:bg-blue-500 rounded-lg transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0
+                 00-5-5.917V5a1 1 0 10-2 0v.083A6 6 0 006 11v3.159c0
+                 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <span id="alertBadge"
+            class="hidden absolute -top-0.5 -right-0.5 bg-red-500 text-white
+                   text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">0</span>
+        </button>
+        <!-- 설정 -->
+        <button onclick="openSettings()" class="p-1.5 hover:bg-blue-500 rounded-lg transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724
+                 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724
+                 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724
+                 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724
+                 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724
+                 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724
+                 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724
+                 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608
+                 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 데스크탑 탭 네비게이션 -->
+    <nav class="hidden md:flex px-4 gap-1" id="deskNav">
+      <button class="desk-tab active px-4 py-2.5 text-sm font-medium text-white/90
+                     hover:text-white transition" onclick="showTab('stock')">
+        재고현황
+      </button>
+      <button class="desk-tab px-4 py-2.5 text-sm font-medium text-white/70
+                     hover:text-white transition" onclick="showTab('transaction')">
+        입출고 처리
+      </button>
+      <button class="desk-tab px-4 py-2.5 text-sm font-medium text-white/70
+                     hover:text-white transition" onclick="showTab('itemMgmt')">
+        품목 관리
+      </button>
+      <button class="desk-tab px-4 py-2.5 text-sm font-medium text-white/70
+                     hover:text-white transition" onclick="showTab('history')">
+        거래 내역
+      </button>
+    </nav>
+  </header>
+
+  <!-- ── 메인 콘텐츠 영역 ──────────────────────────────────── -->
+  <main class="flex-1 main-pad" id="mainContent">
+
+    <!-- ============================================================
+         탭 1: 재고현황
+    ============================================================ -->
+    <section id="tab-stock" class="tab-panel active p-4">
+      <!-- 요약 카드 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="bg-white rounded-xl p-4 border border-gray-200">
+          <p class="text-xs text-gray-500 mb-1">전체 품목</p>
+          <p id="stat-total" class="text-3xl font-bold text-gray-900">0</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-200">
+          <p class="text-xs text-gray-500 mb-1">정상</p>
+          <p id="stat-normal" class="text-3xl font-bold text-green-600">0</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-200">
+          <p class="text-xs text-gray-500 mb-1">부족 경고</p>
+          <p id="stat-warn" class="text-3xl font-bold text-yellow-500">0</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-200">
+          <p class="text-xs text-gray-500 mb-1">긴급 / 소진</p>
+          <p id="stat-crit" class="text-3xl font-bold text-red-600">0</p>
+        </div>
+      </div>
+
+      <!-- 필터 바 -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <div class="relative flex-1 min-w-40">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+          </svg>
+          <input id="stockSearch" type="search" placeholder="품목 검색..."
+            oninput="renderStock()"
+            class="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm bg-white">
+        </div>
+        <select id="stockCatFilter" onchange="renderStock()"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="">전체 분류</option>
+        </select>
+        <select id="stockStatusFilter" onchange="renderStock()"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="">전체 상태</option>
+          <option value="NORMAL">정상</option>
+          <option value="WARNING">부족</option>
+          <option value="CRITICAL">긴급</option>
+          <option value="EMPTY">소진</option>
+        </select>
+      </div>
+
+      <!-- 재고 테이블 / 카드 (JS로 렌더링) -->
+      <div id="stockContainer">
+        <div class="flex items-center justify-center py-16 text-gray-400">
+          <svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          불러오는 중...
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 2: 입출고 처리
+    ============================================================ -->
+    <section id="tab-transaction" class="tab-panel p-4">
+      <div class="max-w-lg mx-auto">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">입출고 처리</h2>
+
+        <!-- 입고/출고 토글 -->
+        <div class="flex rounded-xl overflow-hidden border border-gray-200 mb-5">
+          <button id="btnIn"
+            onclick="setTxType('in')"
+            class="flex-1 py-3 text-sm font-semibold transition bg-green-500 text-white">
+            입고 (IN)
+          </button>
+          <button id="btnOut"
+            onclick="setTxType('out')"
+            class="flex-1 py-3 text-sm font-semibold transition bg-white text-gray-500">
+            출고 (OUT)
+          </button>
+        </div>
+
+        <!-- 재고 미리보기 카드 -->
+        <div id="txItemPreview" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-xs text-blue-600 font-medium">현재 재고</p>
+              <p id="previewCurrent" class="text-2xl font-bold text-blue-800">-</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-blue-600 font-medium">적정 재고</p>
+              <p id="previewOptimal" class="text-2xl font-bold text-blue-800">-</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-blue-600 font-medium">상태</p>
+              <p id="previewStatus" class="text-sm font-bold mt-1">-</p>
+            </div>
+          </div>
+          <!-- 재고 바 -->
+          <div class="mt-3 bg-blue-200 rounded-full h-2">
+            <div id="previewBar" class="h-2 rounded-full bg-blue-500 transition-all" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- 입출고 폼 -->
+        <form id="txForm" onsubmit="submitTransaction(event)"
+          class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+
+          <!-- 품목 선택 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              품목 <span class="text-red-500">*</span>
+            </label>
+            <select id="txItem" required onchange="updateTxPreview()"
+              class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+              <option value="">품목을 선택하세요</option>
+            </select>
+          </div>
+
+          <!-- 수량 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              수량 <span class="text-red-500">*</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="adjustQty(-1)"
+                class="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50
+                       hover:bg-gray-100 font-bold text-lg flex items-center justify-center">−</button>
+              <input id="txQty" type="number" min="1" value="1" required
+                onchange="updateTxPreview()"
+                class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-center font-medium">
+              <button type="button" onclick="adjustQty(1)"
+                class="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50
+                       hover:bg-gray-100 font-bold text-lg flex items-center justify-center">+</button>
+            </div>
+          </div>
+
+          <!-- 입고 추가 필드 -->
+          <div id="inFields">
+            <label class="block text-sm font-medium text-gray-700 mb-1">공급업체</label>
+            <input id="txSupplier" type="text" placeholder="(선택사항)"
+              class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+          </div>
+
+          <!-- 출고 추가 필드 -->
+          <div id="outFields" class="hidden space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">요청 부서</label>
+              <input id="txDept" type="text" placeholder="(선택사항)"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">요청자</label>
+              <input id="txReqBy" type="text" placeholder="(선택사항)"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+          </div>
+
+          <!-- 비고 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">비고</label>
+            <textarea id="txNote" rows="2" placeholder="(선택사항)"
+              class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm resize-none"></textarea>
+          </div>
+
+          <button type="submit" id="txSubmitBtn"
+            class="w-full bg-green-500 hover:bg-green-600 text-white
+                   font-semibold rounded-xl py-3 text-sm transition
+                   flex items-center justify-center gap-2">
+            <span id="txBtnLabel">입고 처리</span>
+            <svg id="txSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10"
+                stroke="white" stroke-width="4"/>
+              <path class="opacity-75" fill="white"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 3: 품목 관리
+    ============================================================ -->
+    <section id="tab-itemMgmt" class="tab-panel p-4">
+      <div class="max-w-2xl mx-auto">
+        <!-- 품목 등록 폼 -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+          <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 4v16m8-8H4"/>
+            </svg>
+            새 품목 등록
+          </h2>
+          <form id="addItemForm" onsubmit="submitAddItem(event)" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  품목명 <span class="text-red-500">*</span>
+                </label>
+                <input id="itemName" type="text" required placeholder="예: A4 복사지 500매"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">분류</label>
+                <div class="flex gap-2">
+                  <select id="itemCat"
+                    class="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+                    <option value="">분류 없음</option>
+                  </select>
+                  <button type="button" onclick="toggleNewCat()"
+                    class="px-3 py-2 border border-gray-200 rounded-lg text-xs text-blue-600
+                           hover:bg-blue-50 transition whitespace-nowrap">
+                    + 신규
+                  </button>
+                </div>
+                <input id="newCatName" type="text" placeholder="새 분류명 입력"
+                  class="hidden mt-2 w-full border border-blue-400 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">단위</label>
+                <input id="itemUnit" type="text" value="개" placeholder="개, 박스, 롤..."
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">초기 재고</label>
+                <input id="itemInit" type="number" min="0" value="0"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  적정 재고 <span class="text-red-500">*</span>
+                </label>
+                <input id="itemOptimal" type="number" min="1" value="10" required
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">최소 재고 (경고 기준)</label>
+                <input id="itemMin" type="number" min="0" value="5"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">메모</label>
+              <textarea id="itemMemo" rows="2" placeholder="(선택사항)"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm resize-none"></textarea>
+            </div>
+            <button type="submit" id="addItemBtn"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white
+                     font-semibold rounded-xl py-3 text-sm transition
+                     flex items-center justify-center gap-2">
+              <span id="addItemBtnLabel">품목 등록</span>
+              <svg id="addItemSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"/>
+                <path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+              </svg>
+            </button>
+          </form>
+        </div>
+
+        <!-- 품목 목록 -->
+        <div class="bg-white rounded-xl border border-gray-200">
+          <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-900 text-sm">등록된 품목</h3>
+            <span id="itemListCount" class="text-xs text-gray-500">0 개</span>
+          </div>
+          <div id="itemListContainer" class="divide-y divide-gray-100"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 4: 거래 내역
+    ============================================================ -->
+    <section id="tab-history" class="tab-panel p-4">
+      <!-- 필터 -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <select id="histTypeFilter" onchange="loadHistory()"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="">전체 유형</option>
+          <option value="in">입고</option>
+          <option value="out">출고</option>
+        </select>
+        <select id="histItemFilter" onchange="loadHistory()"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white flex-1 min-w-32">
+          <option value="">전체 품목</option>
+        </select>
+        <button onclick="loadHistory()"
+          class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+          조회
+        </button>
+      </div>
+
+      <!-- 내역 리스트 (JS 렌더링) -->
+      <div id="historyContainer">
+        <div class="flex items-center justify-center py-16 text-gray-400">
+          <svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          불러오는 중...
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── 모바일 하단 네비게이션 ─────────────────────────────── -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200
+              flex justify-around safe-bottom z-40 shadow-lg" id="mobileNav">
+
+    <button class="nav-btn active flex flex-col items-center py-2 px-4 gap-0.5"
+      onclick="showTab('stock')">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+          d="M20 7l-8-4-8 4m16 0v10l-8 4m0-10L4 7m8 10V11"/>
+      </svg>
+      <span class="text-xs font-medium">재고</span>
+    </button>
+
+    <button class="nav-btn flex flex-col items-center py-2 px-4 gap-0.5 text-gray-500"
+      onclick="showTab('transaction')">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+          d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+      </svg>
+      <span class="text-xs font-medium">입출고</span>
+    </button>
+
+    <button class="nav-btn flex flex-col items-center py-2 px-4 gap-0.5 text-gray-500"
+      onclick="showTab('itemMgmt')">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+          d="M12 4v16m8-8H4"/>
+      </svg>
+      <span class="text-xs font-medium">품목</span>
+    </button>
+
+    <button class="nav-btn flex flex-col items-center py-2 px-4 gap-0.5 text-gray-500"
+      onclick="showTab('history')">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0
+             00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2
+             2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+      </svg>
+      <span class="text-xs font-medium">내역</span>
+    </button>
+
+  </nav>
+</div>
+<!-- /app -->
+<!-- ================================================================
+     공통 모달들
+================================================================ -->
+
+<!-- 알림 모달 -->
+<div id="alertModal"
+     class="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 hidden"
+     style="background:rgba(0,0,0,.5)">
+  <div class="bg-white rounded-2xl w-full max-w-md max-h-[70vh] flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <h3 class="font-bold text-gray-900">재고 알림</h3>
+      <button onclick="closeAlertModal()" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div id="alertList" class="overflow-y-auto flex-1 p-4 space-y-2"></div>
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="resolveAllAlerts()"
+        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm
+               font-medium rounded-lg py-2.5 transition">
+        모두 확인 처리
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div id="confirmModal"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden"
+     style="background:rgba(0,0,0,.5)">
+  <div class="bg-white rounded-2xl w-full max-w-sm p-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667
+               1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464
+               0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="font-bold text-gray-900" id="confirmTitle">삭제 확인</h3>
+        <p class="text-sm text-gray-500" id="confirmMsg"></p>
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="closeConfirm()"
+        class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700
+               font-medium rounded-xl py-2.5 text-sm transition">취소</button>
+      <button id="confirmOkBtn"
+        class="flex-1 bg-red-600 hover:bg-red-700 text-white
+               font-medium rounded-xl py-2.5 text-sm transition">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 모달 -->
+<div id="settingsModal"
+     class="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 hidden"
+     style="background:rgba(0,0,0,.5)">
+  <div class="bg-white rounded-2xl w-full max-w-md p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-bold text-gray-900">설정</h3>
+      <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">내 이름</label>
+        <input id="settingsUser" type="text"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm">
+      </div>
+      <div class="bg-gray-50 rounded-lg p-3 text-xs text-gray-500 space-y-1">
+        <p><span class="font-medium">Supabase URL:</span>
+           <span id="settingsUrlDisplay" class="font-mono break-all"></span></p>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="saveSettings()"
+          class="flex-1 bg-blue-600 hover:bg-blue-700 text-white
+                 font-medium rounded-xl py-2.5 text-sm transition">저장</button>
+        <button onclick="resetConnection()"
+          class="flex-1 bg-red-50 hover:bg-red-100 text-red-600
+                 font-medium rounded-xl py-2.5 text-sm transition">연결 초기화</button>
+      </div>
+      <!-- 샘플 데이터 버튼 -->
+      <button onclick="loadSampleData()"
+        class="w-full border border-gray-200 hover:bg-gray-50 text-gray-700
+               font-medium rounded-xl py-2.5 text-sm transition">
+        샘플 데이터 추가
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 컨테이너 -->
+<div id="toastContainer"
+     class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
+     style="max-width: 320px; width: calc(100vw - 2rem)">
+</div>
 <script>
-// =====================
-// Supabase 설정
-// =====================
-var SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-var SUPABASE_ANON_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
+// ============================================================
+//  소모품 관리 시스템  |  main.js (인라인)
+//  Supabase v2 + PWA + 실시간 동기화
+// ============================================================
 
-var currentUser = null;
-var itemCache = [];
+// ── 전역 상태 ─────────────────────────────────────────────
+let db = null;           // Supabase 클라이언트
+let rtChannel = null;    // Realtime 채널
+let confirmCallback = null; // 삭제 확인 콜백
+let installPrompt = null;   // PWA 설치 프롬프트
 
-// =====================
-// Supabase API 호출
-// =====================
-function sbFetch(method, path, body) {
-  var url = SUPABASE_URL + '/rest/v1/' + path;
-  var headers = {
-    'apikey': SUPABASE_ANON_KEY,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
-  };
-  if (currentUser && currentUser.token) {
-    headers['Authorization'] = 'Bearer ' + currentUser.token;
-  }
-  var opts = { method: method, headers: headers };
-  if (body) opts.body = JSON.stringify(body);
-  return fetch(url, opts).then(function(r) { return r.json(); });
-}
+const state = {
+  stockData    : [],   // v_stock_status 뷰 데이터
+  categories   : [],   // categories 테이블
+  items        : [],   // items 테이블
+  txType       : 'in', // 현재 입출고 타입
+  activeTab    : 'stock',
+  userName     : '관리자',
+  alertCount   : 0,
+};
 
-function sbAuth(action, email, pw) {
-  var url = SUPABASE_URL + '/auth/v1/' + action;
-  return fetch(url, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ email: email, password: pw })
-  }).then(function(r) { return r.json(); });
-}
+// ── HTML 이스케이프 (XSS 방지) ────────────────────────────
+const esc = s => String(s ?? '')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-// =====================
-// 인증 탭 전환
-// =====================
-function showAuthTab(tab) {
-  if (tab === 'login') {
-    document.getElementById('loginForm').classList.remove('hidden');
-    document.getElementById('signupForm').classList.add('hidden');
-    document.getElementById('loginTabBtn').classList.add('active');
-    document.getElementById('signupTabBtn').classList.remove('active');
-  } else {
-    document.getElementById('loginForm').classList.add('hidden');
-    document.getElementById('signupForm').classList.remove('hidden');
-    document.getElementById('loginTabBtn').classList.remove('active');
-    document.getElementById('signupTabBtn').classList.add('active');
-  }
-}
+// ============================================================
+//  초기화
+// ============================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  registerSW();
+  setupInstallPrompt();
+  setupOnlineMonitor();
 
-// =====================
-// 회원가입
-// =====================
-function doSignup() {
-  var email = document.getElementById('signupEmail').value.trim();
-  var pw = document.getElementById('signupPw').value;
-  var msgEl = document.getElementById('signupMsg');
-
-  if (!email || !pw) {
-    msgEl.textContent = '이메일과 비밀번호를 입력하세요.';
-    msgEl.className = 'msg error';
-    return;
-  }
-  if (pw.length < 6) {
-    msgEl.textContent = '비밀번호는 6자 이상이어야 합니다.';
-    msgEl.className = 'msg error';
-    return;
-  }
-
-  msgEl.textContent = '가입 중...';
-  msgEl.className = 'msg';
-
-  sbAuth('signup', email, pw).then(function(data) {
-    if (data.error) {
-      msgEl.textContent = '오류: ' + data.error.message;
-      msgEl.className = 'msg error';
-      return;
-    }
-    if (data.access_token) {
-      currentUser = { id: data.user.id, email: data.user.email, token: data.access_token };
-      localStorage.setItem('supa_user', JSON.stringify(currentUser));
+  const cfg = loadConfig();
+  if (cfg) {
+    initDB(cfg.url, cfg.key);
+    state.userName = cfg.user || '관리자';
+    const ok = await testConnection();
+    if (ok) {
       showApp();
+      await loadAll();
+      setupRealtime();
     } else {
-      msgEl.textContent = '가입 완료! 로그인해주세요.';
-      msgEl.className = 'msg success';
-      showAuthTab('login');
+      showSetup();
+      showToast('Supabase 연결에 실패했습니다. 설정을 확인해 주세요.', 'error');
     }
-  }).catch(function(err) {
-    msgEl.textContent = '네트워크 오류가 발생했습니다.';
-    msgEl.className = 'msg error';
+  } else {
+    showSetup();
+  }
+});
+
+// ── PWA: 서비스 워커 등록 ─────────────────────────────────
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('Service Worker 등록 완료'))
+      .catch(e => console.warn('SW 등록 실패:', e));
+  }
+}
+
+// ── PWA: 설치 프롬프트 ────────────────────────────────────
+function setupInstallPrompt() {
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    installPrompt = e;
+    // 설치 배너 표시 (선택적)
   });
 }
 
-// =====================
-// 로그인
-// =====================
-function doLogin() {
-  var email = document.getElementById('loginEmail').value.trim();
-  var pw = document.getElementById('loginPw').value;
-  var msgEl = document.getElementById('loginMsg');
+// ── 온라인/오프라인 모니터 ────────────────────────────────
+function setupOnlineMonitor() {
+  const update = () => {
+    const badge = document.getElementById('offlineBadge');
+    if (navigator.onLine) {
+      badge.classList.add('hidden');
+      if (db) { loadAll(); setupRealtime(); }
+    } else {
+      badge.classList.remove('hidden');
+      showToast('오프라인 상태입니다. 인터넷 연결을 확인하세요.', 'warning');
+    }
+  };
+  window.addEventListener('online',  update);
+  window.addEventListener('offline', update);
+}
 
-  if (!email || !pw) {
-    msgEl.textContent = '이메일과 비밀번호를 입력하세요.';
-    msgEl.className = 'msg error';
+// ============================================================
+//  설정 / 연결
+// ============================================================
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem('consumable_cfg');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveConfig(cfg) {
+  localStorage.setItem('consumable_cfg', JSON.stringify(cfg));
+}
+
+function initDB(url, key) {
+  const { createClient } = window.supabase;
+  db = createClient(url, key);
+}
+
+async function testConnection() {
+  try {
+    const { error } = await db.from('items').select('id', { count:'exact', head:true });
+    return !error;
+  } catch { return false; }
+}
+
+async function connectAndSave() {
+  const url  = document.getElementById('cfgUrl').value.trim();
+  const key  = document.getElementById('cfgKey').value.trim();
+  const user = document.getElementById('cfgUser').value.trim() || '관리자';
+  const errEl = document.getElementById('setupError');
+
+  if (!url || !key) {
+    errEl.textContent = 'URL과 Anon Key는 필수입니다.';
+    errEl.classList.remove('hidden');
     return;
   }
+  errEl.classList.add('hidden');
+  setConnectLoading(true);
 
-  msgEl.textContent = '로그인 중...';
-  msgEl.className = 'msg';
+  initDB(url, key);
+  const ok = await testConnection();
 
-  sbAuth('token?grant_type=password', email, pw).then(function(data) {
-    if (data.error) {
-      msgEl.textContent = '오류: ' + data.error.message;
-      msgEl.className = 'msg error';
-      return;
-    }
-    if (data.access_token) {
-      currentUser = { id: data.user.id, email: data.user.email, token: data.access_token };
-      localStorage.setItem('supa_user', JSON.stringify(currentUser));
-      showApp();
-    }
-  }).catch(function(err) {
-    msgEl.textContent = '네트워크 오류가 발생했습니다.';
-    msgEl.className = 'msg error';
-  });
+  if (ok) {
+    saveConfig({ url, key, user });
+    state.userName = user;
+    showApp();
+    await loadAll();
+    setupRealtime();
+    showToast('Supabase 연결 성공!', 'success');
+  } else {
+    errEl.textContent = '연결 실패: URL 또는 Key를 확인하고, Supabase SQL에서 schema.sql을 실행했는지 확인하세요.';
+    errEl.classList.remove('hidden');
+  }
+  setConnectLoading(false);
 }
 
-// =====================
-// 로그아웃
-// =====================
-function doLogout() {
-  currentUser = null;
-  localStorage.removeItem('supa_user');
-  document.getElementById('appPage').classList.add('hidden');
-  document.getElementById('authPage').classList.remove('hidden');
+function setConnectLoading(on) {
+  document.getElementById('connectBtnText').textContent = on ? '연결 중...' : '연결 및 시작하기';
+  document.getElementById('connectSpinner').classList.toggle('hidden', !on);
 }
 
-// =====================
-// 앱 화면 진입
-// =====================
+function showSetup() { document.getElementById('setupModal').classList.remove('hidden'); }
+function hideSetup() { document.getElementById('setupModal').classList.add('hidden'); }
+
 function showApp() {
-  document.getElementById('authPage').classList.add('hidden');
-  document.getElementById('appPage').classList.remove('hidden');
-  showAppTab('stock');
-  loadStock();
+  hideSetup();
+  document.getElementById('app').classList.remove('hidden');
 }
 
-// =====================
-// 앱 탭 전환
-// =====================
-function showAppTab(tab) {
-  var tabs = ['stock', 'add', 'log'];
-  for (var i = 0; i < tabs.length; i++) {
-    var t = tabs[i];
-    var tabEl = document.getElementById('tab_' + t);
-    var contentId = 'tabStock';
-    if (t === 'add') contentId = 'tabAdd';
-    if (t === 'log') contentId = 'tabLog';
-    var contentEl = document.getElementById(contentId);
-    if (t === tab) {
-      tabEl.classList.add('active');
-      contentEl.classList.remove('hidden');
-    } else {
-      tabEl.classList.remove('active');
-      contentEl.classList.add('hidden');
-    }
-  }
-  if (tab === 'stock') loadStock();
-  if (tab === 'add') loadAdjust();
-  if (tab === 'log') loadLog();
+// ============================================================
+//  실시간 구독 (Supabase Realtime)
+// ============================================================
+function setupRealtime() {
+  if (rtChannel) db.removeChannel(rtChannel);
+
+  rtChannel = db.channel('consumable_realtime')
+    // 재고 잔액 변경 → 재고현황 탭 갱신
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'stock_balance' },
+        async () => {
+          await loadStockData();
+          renderStock();
+          updateSummary();
+          if (state.activeTab === 'stock') showToast('재고가 업데이트 되었습니다.', 'info');
+        })
+    // 입고 추가 → 거래내역 탭 갱신
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'stock_inbound' },
+        () => { if (state.activeTab === 'history') loadHistory(); })
+    // 출고 추가 → 거래내역 탭 갱신
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'stock_outbound' },
+        () => { if (state.activeTab === 'history') loadHistory(); })
+    // 알림 추가
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'stock_alerts' },
+        () => loadAlertCount())
+    .subscribe(status => {
+      const dot = document.getElementById('syncDot');
+      if (status === 'SUBSCRIBED') {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-green-400 transition-colors';
+        dot.title = '실시간 연결됨';
+      } else {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-yellow-400 transition-colors';
+        dot.title = '연결 중...';
+      }
+    });
 }
 
-// =====================
-// 재고 불러오기
-// =====================
-function loadStock() {
-  var el = document.getElementById('stockList');
-  el.innerHTML = '<div class="loading">불러오는 중...</div>';
-
-  sbFetch('GET', 'stock_items?user_id=eq.' + currentUser.id + '&order=created_at.asc', null).then(function(data) {
-    itemCache = Array.isArray(data) ? data : [];
-    renderStock();
-    renderAlerts();
-  }).catch(function() {
-    el.innerHTML = '<div class="empty">오류가 발생했습니다.</div>';
-  });
+// ============================================================
+//  데이터 로드
+// ============================================================
+async function loadAll() {
+  await Promise.all([loadCategories(), loadItems(), loadStockData(), loadAlertCount()]);
+  renderStock();
+  updateSummary();
+  renderItemList();
+  populateItemSelects();
+  populateCategoryFilters();
 }
 
-function renderStock() {
-  var el = document.getElementById('stockList');
-  if (itemCache.length === 0) {
-    el.innerHTML = '<div class="empty">등록된 품목이 없습니다.</div>';
-    return;
-  }
-  var html = '';
-  for (var i = 0; i < itemCache.length; i++) {
-    var item = itemCache[i];
-    var isLow = item.quantity <= item.min_quantity;
-    html += '<div class="item-row">';
-    html += '<div class="item-info">';
-    html += '<div class="item-name">' + esc(item.name) + '</div>';
-    html += '<div class="item-qty' + (isLow ? ' low' : '') + '">';
-    html += item.quantity + ' ' + esc(item.unit);
-    if (isLow) html += ' (부족!)';
-    html += '</div></div></div>';
-  }
-  el.innerHTML = html;
+async function loadCategories() {
+  const { data, error } = await db.from('categories')
+    .select('*').order('sort_order');
+  if (!error) state.categories = data || [];
 }
 
-function renderAlerts() {
-  var box = document.getElementById('alertBox');
-  var low = [];
-  for (var i = 0; i < itemCache.length; i++) {
-    if (itemCache[i].quantity <= itemCache[i].min_quantity) {
-      low.push(itemCache[i].name);
-    }
-  }
-  if (low.length > 0) {
-    box.innerHTML = '<p>부족 품목: ' + low.join(', ') + '</p>';
-    box.className = 'alert-box';
+async function loadItems() {
+  const { data, error } = await db.from('items')
+    .select('id, name, unit, optimal_stock, min_stock, category_id, memo')
+    .eq('is_active', true).order('name');
+  if (!error) state.items = data || [];
+}
+
+async function loadStockData() {
+  const { data, error } = await db.from('v_stock_status').select('*');
+  if (!error) state.stockData = data || [];
+}
+
+async function loadAlertCount() {
+  const { count, error } = await db.from('stock_alerts')
+    .select('*', { count:'exact', head:true })
+    .eq('is_resolved', false);
+  state.alertCount = error ? 0 : (count || 0);
+  const badge = document.getElementById('alertBadge');
+  if (state.alertCount > 0) {
+    badge.textContent = state.alertCount > 99 ? '99+' : state.alertCount;
+    badge.classList.remove('hidden');
   } else {
-    box.className = 'hidden';
+    badge.classList.add('hidden');
   }
 }
 
-// =====================
-// 조정 목록 불러오기
-// =====================
-function loadAdjust() {
-  var el = document.getElementById('adjustList');
-  el.innerHTML = '<div class="loading">불러오는 중...</div>';
+async function loadHistory() {
+  const type = document.getElementById('histTypeFilter').value;
+  const item = document.getElementById('histItemFilter').value;
 
-  sbFetch('GET', 'stock_items?user_id=eq.' + currentUser.id + '&order=created_at.asc', null).then(function(data) {
-    itemCache = Array.isArray(data) ? data : [];
-    renderAdjust();
-  }).catch(function() {
-    el.innerHTML = '<div class="empty">오류가 발생했습니다.</div>';
+  let inData = [], outData = [];
+
+  if (!type || type === 'in') {
+    let q = db.from('stock_inbound')
+      .select('id, item_id, quantity, supplier, note, created_by, created_at, items(name,unit)')
+      .order('created_at', { ascending:false }).limit(100);
+    if (item) q = q.eq('item_id', item);
+    const { data } = await q;
+    inData = (data || []).map(r => ({ ...r, type:'in' }));
+  }
+
+  if (!type || type === 'out') {
+    let q = db.from('stock_outbound')
+      .select('id, item_id, quantity, department, requested_by, note, created_by, created_at, items(name,unit)')
+      .order('created_at', { ascending:false }).limit(100);
+    if (item) q = q.eq('item_id', item);
+    const { data } = await q;
+    outData = (data || []).map(r => ({ ...r, type:'out' }));
+  }
+
+  const all = [...inData, ...outData]
+    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 100);
+
+  renderHistory(all);
+}
+
+// ============================================================
+//  렌더링
+// ============================================================
+
+// ── 재고현황 렌더링 ──────────────────────────────────────
+function renderStock() {
+  const search = (document.getElementById('stockSearch')?.value || '').toLowerCase();
+  const catF   = document.getElementById('stockCatFilter')?.value || '';
+  const stF    = document.getElementById('stockStatusFilter')?.value || '';
+
+  let rows = state.stockData.filter(r => {
+    if (search && !r.item_name.toLowerCase().includes(search)) return false;
+    if (catF   && r.category_name !== catF) return false;
+    if (stF    && r.stock_status  !== stF)  return false;
+    return true;
+  });
+
+  const container = document.getElementById('stockContainer');
+  if (!rows.length) {
+    container.innerHTML = '<p class="text-center py-12 text-gray-400 text-sm">표시할 품목이 없습니다.</p>';
+    return;
+  }
+
+  // 모바일: 카드 / 데스크탑: 테이블
+  const isMobile = window.innerWidth < 768;
+  container.innerHTML = isMobile ? renderStockCards(rows) : renderStockTable(rows);
+}
+
+function statusStyle(s) {
+  return {
+    NORMAL:   { bg:'bg-green-100',  text:'text-green-700',  label:'정상',  barColor:'#22C55E' },
+    WARNING:  { bg:'bg-yellow-100', text:'text-yellow-700', label:'부족',  barColor:'#EAB308' },
+    CRITICAL: { bg:'bg-red-100',    text:'text-red-700',    label:'긴급',  barColor:'#EF4444' },
+    EMPTY:    { bg:'bg-red-100',    text:'text-red-700',    label:'소진',  barColor:'#EF4444' },
+  }[s] || { bg:'bg-gray-100', text:'text-gray-700', label:s, barColor:'#9CA3AF' };
+}
+
+function rowBgClass(s) {
+  if (s === 'CRITICAL' || s === 'EMPTY') return 'row-critical';
+  if (s === 'WARNING')  return 'row-warning';
+  return '';
+}
+
+function renderStockCards(rows) {
+  return rows.map(r => {
+    const st   = statusStyle(r.stock_status);
+    const pct  = Math.min(100, Math.max(0, r.stock_ratio ?? 0));
+    const blink = (r.stock_status==='CRITICAL'||r.stock_status==='EMPTY') ? 'blink' : '';
+    return `
+    <div class="bg-white rounded-xl border border-gray-200 p-4 mb-3 ${rowBgClass(r.stock_status)}">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <p class="font-semibold text-gray-900 text-sm">${esc(r.item_name)}</p>
+          ${r.category_name
+            ? `<span class="text-xs px-1.5 py-0.5 rounded font-medium"
+                     style="background:${esc(r.category_color)}22;color:${esc(r.category_color)}">
+                 ${esc(r.category_name)}
+               </span>`
+            : ''}
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full font-medium ${st.bg} ${st.text} ${blink}">
+          ${st.label}
+        </span>
+      </div>
+      <div class="flex justify-between text-xs text-gray-500 mb-1.5">
+        <span>현재 <b class="text-gray-900 text-sm">${r.current_qty}</b> ${esc(r.unit)}</span>
+        <span>적정 ${r.optimal_stock} / 최소 ${r.min_stock}</span>
+      </div>
+      <div class="bg-gray-200 rounded-full h-2">
+        <div class="stock-bar-fill h-2 rounded-full"
+             style="width:${pct}%;background:${st.barColor}"></div>
+      </div>
+      ${r.memo ? `<p class="text-xs text-gray-400 mt-2">${esc(r.memo)}</p>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderStockTable(rows) {
+  const headers = ['품목명','분류','현재 재고','적정/최소','재고 현황','상태','최종 업데이트'];
+  return `
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr>${headers.map(h=>
+          `<th class="text-left px-4 py-3 text-xs font-semibold text-gray-600 whitespace-nowrap">${h}</th>`
+        ).join('')}</tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        ${rows.map(r => {
+          const st  = statusStyle(r.stock_status);
+          const pct = Math.min(100, Math.max(0, r.stock_ratio ?? 0));
+          const blink = (r.stock_status==='CRITICAL'||r.stock_status==='EMPTY') ? 'blink' : '';
+          const dt  = r.last_updated
+            ? new Date(r.last_updated).toLocaleString('ko-KR',
+                {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+            : '-';
+          return `
+          <tr class="${rowBgClass(r.stock_status)} hover:bg-opacity-80 transition">
+            <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">${esc(r.item_name)}</td>
+            <td class="px-4 py-3">
+              ${r.category_name
+                ? `<span class="text-xs px-2 py-0.5 rounded font-medium"
+                         style="background:${esc(r.category_color)}22;color:${esc(r.category_color)}">
+                     ${esc(r.category_name)}</span>`
+                : '<span class="text-gray-300">-</span>'}
+            </td>
+            <td class="px-4 py-3 font-bold text-gray-900">${r.current_qty} <span class="font-normal text-gray-500 text-xs">${esc(r.unit)}</span></td>
+            <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">${r.optimal_stock} / ${r.min_stock}</td>
+            <td class="px-4 py-3 min-w-28">
+              <div class="bg-gray-200 rounded-full h-2 w-full">
+                <div class="stock-bar-fill h-2 rounded-full"
+                     style="width:${pct}%;background:${st.barColor}"></div>
+              </div>
+              <span class="text-xs text-gray-400">${pct.toFixed(0)}%</span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="text-xs px-2 py-1 rounded-full font-medium ${st.bg} ${st.text} ${blink}">
+                ${st.label}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">${dt}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+// ── 요약 카드 업데이트 ────────────────────────────────────
+function updateSummary() {
+  const d = state.stockData;
+  document.getElementById('stat-total').textContent  = d.length;
+  document.getElementById('stat-normal').textContent = d.filter(r=>r.stock_status==='NORMAL').length;
+  document.getElementById('stat-warn').textContent   = d.filter(r=>r.stock_status==='WARNING').length;
+  document.getElementById('stat-crit').textContent   = d.filter(r=>r.stock_status==='CRITICAL'||r.stock_status==='EMPTY').length;
+}
+
+// ── 품목 목록 렌더링 ─────────────────────────────────────
+function renderItemList() {
+  const container = document.getElementById('itemListContainer');
+  document.getElementById('itemListCount').textContent = `${state.items.length} 개`;
+
+  if (!state.items.length) {
+    container.innerHTML = '<p class="text-center py-8 text-gray-400 text-sm">등록된 품목이 없습니다.</p>';
+    return;
+  }
+
+  container.innerHTML = state.items.map(item => {
+    const cat = state.categories.find(c => c.id === item.category_id);
+    return `
+    <div class="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition">
+      <div class="flex-1 min-w-0 mr-3">
+        <p class="font-medium text-gray-900 text-sm truncate">${esc(item.name)}</p>
+        <div class="flex items-center gap-2 mt-0.5">
+          ${cat ? `<span class="text-xs px-1.5 py-0.5 rounded font-medium"
+                        style="background:${esc(cat.color)}22;color:${esc(cat.color)}">
+                    ${esc(cat.name)}</span>` : ''}
+          <span class="text-xs text-gray-400">단위: ${esc(item.unit)}</span>
+          <span class="text-xs text-gray-400">적정: ${item.optimal_stock}</span>
+        </div>
+      </div>
+      <button onclick="deleteItem('${item.id}', '${esc(item.name)}')"
+        class="flex-shrink-0 text-red-400 hover:text-red-600 p-1.5
+               hover:bg-red-50 rounded-lg transition" title="삭제">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0
+               01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0
+               00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+// ── 거래내역 렌더링 ───────────────────────────────────────
+function renderHistory(list) {
+  const container = document.getElementById('historyContainer');
+  if (!list.length) {
+    container.innerHTML = '<p class="text-center py-12 text-gray-400 text-sm">거래 내역이 없습니다.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+  <div class="space-y-2">
+    ${list.map(r => {
+      const isIn  = r.type === 'in';
+      const name  = r.items?.name || '알 수 없음';
+      const unit  = r.items?.unit || '개';
+      const dt    = new Date(r.created_at).toLocaleString('ko-KR',
+        {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const extra = isIn
+        ? (r.supplier ? `공급: ${esc(r.supplier)}` : '')
+        : [r.department && `부서: ${esc(r.department)}`,
+           r.requested_by && `요청: ${esc(r.requested_by)}`].filter(Boolean).join(' · ');
+      return `
+      <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-3">
+        <div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center
+          ${isIn ? 'bg-green-100' : 'bg-orange-100'}">
+          <svg class="w-5 h-5 ${isIn ? 'text-green-600' : 'text-orange-600'}"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            ${isIn
+              ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7m14-8l-7 7-7-7"/>'
+              : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 19l7-7 7 7"/>'}
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-semibold text-gray-900 text-sm truncate">${esc(name)}</p>
+            <span class="font-bold text-base flex-shrink-0
+              ${isIn ? 'text-green-600' : 'text-orange-600'}">
+              ${isIn ? '+' : '-'}${r.quantity} ${esc(unit)}
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span class="text-xs px-1.5 py-0.5 rounded font-medium
+              ${isIn ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">
+              ${isIn ? '입고' : '출고'}
+            </span>
+            ${extra ? `<span class="text-xs text-gray-500">${extra}</span>` : ''}
+            ${r.note ? `<span class="text-xs text-gray-400">${esc(r.note)}</span>` : ''}
+          </div>
+          <p class="text-xs text-gray-400 mt-1">${dt} · ${esc(r.created_by || '관리자')}</p>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── 셀렉트 박스 채우기 ────────────────────────────────────
+function populateItemSelects() {
+  const selectors = ['txItem', 'histItemFilter'];
+  selectors.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = `<option value="">${id === 'txItem' ? '품목을 선택하세요' : '전체 품목'}</option>`
+      + state.items.map(i =>
+          `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`
+        ).join('');
+    if (prev) el.value = prev;
   });
 }
 
-function renderAdjust() {
-  var el = document.getElementById('adjustList');
-  if (itemCache.length === 0) {
-    el.innerHTML = '<div class="empty">등록된 품목이 없습니다.</div>';
-    return;
+function populateCategoryFilters() {
+  // 재고현황 필터
+  const cf = document.getElementById('stockCatFilter');
+  if (cf) {
+    cf.innerHTML = '<option value="">전체 분류</option>'
+      + state.categories.map(c =>
+          `<option value="${esc(c.name)}">${esc(c.name)}</option>`
+        ).join('');
   }
-  var html = '';
-  for (var i = 0; i < itemCache.length; i++) {
-    var item = itemCache[i];
-    html += '<div class="item-row">';
-    html += '<div class="item-info">';
-    html += '<div class="item-name">' + esc(item.name) + '</div>';
-    html += '<div class="item-qty">' + item.quantity + ' ' + esc(item.unit) + '</div>';
-    html += '</div>';
-    html += '<div class="item-actions">';
-    html += '<button class="qty-btn" onclick="adjustQty('' + item.id + '',-1)">-</button>';
-    html += '<button class="qty-btn" onclick="adjustQty('' + item.id + '',1)">+</button>';
-    html += '<button class="btn-del" onclick="deleteItem('' + item.id + '')">삭제</button>';
-    html += '</div></div>';
+  // 품목 등록 폼
+  const ic = document.getElementById('itemCat');
+  if (ic) {
+    const prev = ic.value;
+    ic.innerHTML = '<option value="">분류 없음</option>'
+      + state.categories.map(c =>
+          `<option value="${c.id}">${esc(c.name)}</option>`
+        ).join('');
+    if (prev) ic.value = prev;
   }
-  el.innerHTML = html;
 }
 
-// =====================
-// 품목 추가
-// =====================
-function addItem() {
-  var name = document.getElementById('newItemName').value.trim();
-  var qty = parseInt(document.getElementById('newItemQty').value) || 0;
-  var unit = document.getElementById('newItemUnit').value.trim() || '개';
-  var minQty = parseInt(document.getElementById('newItemMin').value) || 0;
-  var msgEl = document.getElementById('addMsg');
+// ============================================================
+//  입출고 처리
+// ============================================================
+function setTxType(type) {
+  state.txType = type;
+  const btnIn  = document.getElementById('btnIn');
+  const btnOut = document.getElementById('btnOut');
+  const inF    = document.getElementById('inFields');
+  const outF   = document.getElementById('outFields');
+  const lbl    = document.getElementById('txBtnLabel');
+  const btn    = document.getElementById('txSubmitBtn');
 
-  if (!name) {
-    msgEl.textContent = '품목명을 입력하세요.';
-    msgEl.className = 'msg error';
-    return;
+  if (type === 'in') {
+    btnIn.className  = 'flex-1 py-3 text-sm font-semibold transition bg-green-500 text-white';
+    btnOut.className = 'flex-1 py-3 text-sm font-semibold transition bg-white text-gray-500';
+    inF.classList.remove('hidden');
+    outF.classList.add('hidden');
+    lbl.textContent = '입고 처리';
+    btn.className = btn.className.replace(/bg-[a-z]+-[0-9]+/g, '').trim()
+      + ' bg-green-500 hover:bg-green-600';
+  } else {
+    btnIn.className  = 'flex-1 py-3 text-sm font-semibold transition bg-white text-gray-500';
+    btnOut.className = 'flex-1 py-3 text-sm font-semibold transition bg-orange-500 text-white';
+    inF.classList.add('hidden');
+    outF.classList.remove('hidden');
+    lbl.textContent = '출고 처리';
+    btn.className = btn.className.replace(/bg-[a-z]+-[0-9]+/g, '').trim()
+      + ' bg-orange-500 hover:bg-orange-600';
   }
-
-  msgEl.textContent = '추가 중...';
-  msgEl.className = 'msg';
-
-  var newItem = {
-    user_id: currentUser.id,
-    name: name,
-    quantity: qty,
-    unit: unit,
-    min_quantity: minQty
-  };
-
-  sbFetch('POST', 'stock_items', newItem).then(function(data) {
-    msgEl.textContent = '추가 완료!';
-    msgEl.className = 'msg success';
-    document.getElementById('newItemName').value = '';
-    document.getElementById('newItemQty').value = '';
-    document.getElementById('newItemUnit').value = '';
-    document.getElementById('newItemMin').value = '';
-    loadAdjust();
-    setTimeout(function() { msgEl.textContent = ''; }, 2000);
-  }).catch(function() {
-    msgEl.textContent = '오류가 발생했습니다.';
-    msgEl.className = 'msg error';
-  });
+  updateTxPreview();
 }
 
-// =====================
-// 수량 조정
-// =====================
-function adjustQty(itemId, delta) {
-  var item = null;
-  for (var i = 0; i < itemCache.length; i++) {
-    if (itemCache[i].id === itemId) {
-      item = itemCache[i];
-      break;
+function updateTxPreview() {
+  const itemId = document.getElementById('txItem').value;
+  const qty    = parseInt(document.getElementById('txQty').value) || 0;
+  const preview = document.getElementById('txItemPreview');
+
+  if (!itemId) { preview.classList.add('hidden'); return; }
+
+  const row = state.stockData.find(r => r.id === itemId);
+  if (!row) { preview.classList.add('hidden'); return; }
+
+  preview.classList.remove('hidden');
+  document.getElementById('previewCurrent').textContent = `${row.current_qty} ${row.unit}`;
+  document.getElementById('previewOptimal').textContent = `${row.optimal_stock} ${row.unit}`;
+
+  const st = statusStyle(row.stock_status);
+  document.getElementById('previewStatus').textContent = st.label;
+  document.getElementById('previewStatus').className =
+    `text-sm font-bold mt-1 ${st.text}`;
+
+  // 출고 시 차감 후 예상 재고
+  const afterQty = state.txType === 'out'
+    ? Math.max(0, row.current_qty - qty) : row.current_qty + qty;
+  const pct = row.optimal_stock > 0
+    ? Math.min(100, (afterQty / row.optimal_stock) * 100) : 100;
+
+  const bar = document.getElementById('previewBar');
+  bar.style.width = `${pct}%`;
+  bar.style.background = pct >= 100 ? '#22C55E' : pct >= 50 ? '#EAB308' : '#EF4444';
+}
+
+function adjustQty(delta) {
+  const el = document.getElementById('txQty');
+  el.value = Math.max(1, (parseInt(el.value)||1) + delta);
+  updateTxPreview();
+}
+
+async function submitTransaction(e) {
+  e.preventDefault();
+  const itemId = document.getElementById('txItem').value;
+  const qty    = parseInt(document.getElementById('txQty').value);
+  const note   = document.getElementById('txNote').value.trim();
+  if (!itemId || !qty || qty < 1) return;
+
+  setTxLoading(true);
+  try {
+    let result;
+    if (state.txType === 'in') {
+      const supplier = document.getElementById('txSupplier').value.trim();
+      const { data, error } = await db.rpc('process_inbound', {
+        p_item_id  : itemId,
+        p_quantity : qty,
+        p_supplier : supplier || null,
+        p_note     : note || null,
+        p_user     : state.userName
+      });
+      result = data;
+      if (error) throw error;
+    } else {
+      const dept  = document.getElementById('txDept').value.trim();
+      const reqBy = document.getElementById('txReqBy').value.trim();
+      const { data, error } = await db.rpc('process_outbound', {
+        p_item_id      : itemId,
+        p_quantity     : qty,
+        p_department   : dept   || null,
+        p_requested_by : reqBy  || null,
+        p_note         : note   || null,
+        p_user         : state.userName
+      });
+      result = data;
+      if (error) throw error;
+      if (result && !result.success) throw new Error(result.error || '출고 실패');
     }
+
+    const newQty = result?.new_qty ?? 0;
+    const item   = state.items.find(i => i.id === itemId);
+    const label  = state.txType === 'in' ? '입고' : '출고';
+    showToast(`${label} 완료: ${item?.name || ''} ${qty}${item?.unit || '개'} (잔여: ${newQty}${item?.unit || '개'})`, 'success');
+
+    // 재고 경고 체크
+    if (state.txType === 'out') await checkAndInsertAlert(itemId, newQty);
+
+    // 폼 초기화
+    document.getElementById('txForm').reset();
+    document.getElementById('txQty').value = 1;
+    document.getElementById('txItemPreview').classList.add('hidden');
+
+    // 데이터 갱신
+    await loadStockData();
+    renderStock();
+    updateSummary();
+
+  } catch (err) {
+    showToast(err.message || '처리 중 오류가 발생했습니다.', 'error');
   }
+  setTxLoading(false);
+}
+
+function setTxLoading(on) {
+  document.getElementById('txSpinner').classList.toggle('hidden', !on);
+  document.getElementById('txSubmitBtn').disabled = on;
+}
+
+// ── 재고 경고 삽입 ────────────────────────────────────────
+async function checkAndInsertAlert(itemId, newQty) {
+  const item = state.items.find(i => i.id === itemId);
   if (!item) return;
 
-  var newQty = item.quantity + delta;
-  if (newQty < 0) newQty = 0;
+  let level = null, msg = '';
+  if (newQty === 0) {
+    level = 'CRITICAL'; msg = `[소진] ${item.name} 재고가 모두 소진되었습니다.`;
+  } else if (newQty <= Math.floor(item.min_stock * 0.5)) {
+    level = 'CRITICAL'; msg = `[긴급] ${item.name} 재고가 매우 부족합니다. (현재 ${newQty}${item.unit})`;
+  } else if (newQty <= item.min_stock) {
+    level = 'WARNING'; msg = `[경고] ${item.name} 재고가 최소 기준 이하입니다. (현재 ${newQty}${item.unit})`;
+  }
 
-  sbFetch('PATCH', 'stock_items?id=eq.' + itemId, { quantity: newQty }).then(function() {
-    var logData = {
-      user_id: currentUser.id,
-      item_id: itemId,
-      item_name: item.name,
-      change_amount: delta,
-      note: delta > 0 ? '입고' : '사용'
-    };
-    sbFetch('POST', 'stock_logs', logData);
-    loadAdjust();
-  });
+  if (level) {
+    await db.from('stock_alerts').insert({
+      item_id: itemId, alert_level: level, message: msg
+    });
+    showToast(msg, level === 'CRITICAL' ? 'error' : 'warning');
+    await loadAlertCount();
+  }
 }
 
-// =====================
-// 품목 삭제
-// =====================
-function deleteItem(itemId) {
-  if (!confirm('정말 삭제하시겠습니까?')) return;
-  sbFetch('DELETE', 'stock_items?id=eq.' + itemId, null).then(function() {
-    loadAdjust();
-  });
-}
+// ============================================================
+//  품목 관리
+// ============================================================
+async function submitAddItem(e) {
+  e.preventDefault();
+  const name    = document.getElementById('itemName').value.trim();
+  const catId   = document.getElementById('itemCat').value;
+  const newCat  = document.getElementById('newCatName').value.trim();
+  const unit    = document.getElementById('itemUnit').value.trim() || '개';
+  const initQty = parseInt(document.getElementById('itemInit').value) || 0;
+  const optimal = parseInt(document.getElementById('itemOptimal').value) || 10;
+  const min     = parseInt(document.getElementById('itemMin').value) || 5;
+  const memo    = document.getElementById('itemMemo').value.trim();
 
-// =====================
-// 기록 불러오기
-// =====================
-function loadLog() {
-  var el = document.getElementById('logList');
-  el.innerHTML = '<div class="loading">불러오는 중...</div>';
+  if (!name) return;
 
-  sbFetch('GET', 'stock_logs?user_id=eq.' + currentUser.id + '&order=created_at.desc&limit=50', null).then(function(data) {
-    var logs = Array.isArray(data) ? data : [];
-    if (logs.length === 0) {
-      el.innerHTML = '<div class="empty">기록이 없습니다.</div>';
-      return;
+  setAddItemLoading(true);
+  try {
+    // 신규 분류 생성
+    let finalCatId = catId || null;
+    if (newCat) {
+      const { data: nc, error: ce } = await db.from('categories')
+        .insert({ name: newCat }).select('id').single();
+      if (ce) throw ce;
+      finalCatId = nc.id;
+      await loadCategories();
+      populateCategoryFilters();
     }
-    var html = '';
-    for (var i = 0; i < logs.length; i++) {
-      var log = logs[i];
-      var isPlus = log.change_amount > 0;
-      var dt = new Date(log.created_at);
-      var dtStr = (dt.getMonth()+1) + '/' + dt.getDate() + ' ' + dt.getHours() + ':' + ('0'+dt.getMinutes()).slice(-2);
-      html += '<div class="log-row">';
-      html += '<div>';
-      html += '<div class="log-name">' + esc(log.item_name) + '</div>';
-      html += '<div class="log-detail">' + esc(log.note) + ' · ' + dtStr + '</div>';
-      html += '</div>';
-      html += '<div class="log-change ' + (isPlus ? 'plus' : 'minus') + '">';
-      html += (isPlus ? '+' : '') + log.change_amount;
-      html += '</div></div>';
+
+    // 품목 등록
+    const { data: newItem, error: ie } = await db.from('items')
+      .insert({ name, category_id: finalCatId, unit, optimal_stock: optimal, min_stock: min, memo: memo || null })
+      .select('id').single();
+    if (ie) throw ie;
+
+    // 초기 재고 입고 처리
+    if (initQty > 0) {
+      const { data: ir } = await db.rpc('process_inbound', {
+        p_item_id: newItem.id, p_quantity: initQty,
+        p_note: '초기 재고 등록', p_user: state.userName
+      });
     }
-    el.innerHTML = html;
-  }).catch(function() {
-    el.innerHTML = '<div class="empty">오류가 발생했습니다.</div>';
+
+    showToast(`'${name}' 품목이 등록되었습니다.`, 'success');
+    document.getElementById('addItemForm').reset();
+    document.getElementById('itemOptimal').value = 10;
+    document.getElementById('itemMin').value     = 5;
+    document.getElementById('newCatName').classList.add('hidden');
+
+    await loadAll();
+  } catch (err) {
+    showToast(err.message || '품목 등록 실패', 'error');
+  }
+  setAddItemLoading(false);
+}
+
+function setAddItemLoading(on) {
+  document.getElementById('addItemSpinner').classList.toggle('hidden', !on);
+  document.getElementById('addItemBtnLabel').textContent = on ? '등록 중...' : '품목 등록';
+  document.getElementById('addItemBtn').disabled = on;
+}
+
+function toggleNewCat() {
+  const el = document.getElementById('newCatName');
+  el.classList.toggle('hidden');
+  if (!el.classList.contains('hidden')) el.focus();
+}
+
+function deleteItem(id, name) {
+  openConfirm(
+    `'${name}' 삭제`,
+    '이 품목과 관련된 모든 입출고 내역도 함께 삭제됩니다. 계속하시겠습니까?',
+    async () => {
+      const { error } = await db.from('items').update({ is_active: false }).eq('id', id);
+      if (error) { showToast('삭제 실패: ' + error.message, 'error'); return; }
+      showToast(`'${name}' 품목이 삭제되었습니다.`, 'success');
+      await loadAll();
+    }
+  );
+}
+
+// ============================================================
+//  알림 모달
+// ============================================================
+async function openAlertModal() {
+  const { data } = await db.from('stock_alerts')
+    .select('*, items(name)')
+    .eq('is_resolved', false)
+    .order('created_at', { ascending:false })
+    .limit(50);
+
+  const list = document.getElementById('alertList');
+  if (!data || !data.length) {
+    list.innerHTML = '<p class="text-center py-8 text-gray-400 text-sm">미처리 알림이 없습니다.</p>';
+  } else {
+    list.innerHTML = data.map(a => {
+      const lStyle = {
+        WARNING:  'bg-yellow-100 text-yellow-800',
+        CRITICAL: 'bg-red-100 text-red-800',
+        INFO:     'bg-blue-100 text-blue-800',
+      }[a.alert_level] || 'bg-gray-100 text-gray-800';
+      const dt = new Date(a.created_at).toLocaleString('ko-KR',
+        {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return `
+      <div class="flex items-start gap-3 p-3 rounded-lg ${lStyle}">
+        <div class="flex-1">
+          <p class="text-sm font-medium">${esc(a.message)}</p>
+          <p class="text-xs opacity-70 mt-0.5">${dt}</p>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('alertModal').classList.remove('hidden');
+}
+
+function closeAlertModal() {
+  document.getElementById('alertModal').classList.add('hidden');
+}
+
+async function resolveAllAlerts() {
+  await db.from('stock_alerts')
+    .update({ is_resolved: true, resolved_at: new Date().toISOString() })
+    .eq('is_resolved', false);
+  await loadAlertCount();
+  closeAlertModal();
+  showToast('모든 알림을 확인 처리했습니다.', 'success');
+}
+
+// ============================================================
+//  탭 전환
+// ============================================================
+function showTab(tab) {
+  state.activeTab = tab;
+
+  // 패널 전환
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('tab-' + tab);
+  if (panel) panel.classList.add('active');
+
+  // 데스크탑 탭 버튼
+  document.querySelectorAll('.desk-tab').forEach((btn, i) => {
+    const tabs = ['stock','transaction','itemMgmt','history'];
+    btn.classList.toggle('active', tabs[i] === tab);
+    btn.className = btn.className.replace(/text-white\/\d+|text-white/g, '').trim();
+    btn.className += tabs[i] === tab ? ' text-white' : ' text-white/70';
   });
+
+  // 모바일 하단 버튼
+  document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+    const tabs = ['stock','transaction','itemMgmt','history'];
+    btn.classList.toggle('active', tabs[i] === tab);
+    if (tabs[i] === tab) btn.classList.remove('text-gray-500');
+    else btn.classList.add('text-gray-500');
+  });
+
+  // 탭 진입 시 데이터 로드
+  if (tab === 'history') loadHistory();
+  if (tab === 'stock')   { renderStock(); updateSummary(); }
 }
 
-// =====================
-// 유틸
-// =====================
-function esc(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// ============================================================
+//  설정 모달
+// ============================================================
+function openSettings() {
+  const cfg = loadConfig();
+  document.getElementById('settingsUser').value = state.userName;
+  document.getElementById('settingsUrlDisplay').textContent =
+    cfg?.url ? cfg.url.replace(/^https?:\/\//, '') : '-';
+  document.getElementById('settingsModal').classList.remove('hidden');
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.add('hidden');
+}
+function saveSettings() {
+  const user = document.getElementById('settingsUser').value.trim() || '관리자';
+  state.userName = user;
+  const cfg = loadConfig();
+  if (cfg) saveConfig({ ...cfg, user });
+  closeSettings();
+  showToast('설정이 저장되었습니다.', 'success');
+}
+function resetConnection() {
+  if (confirm('연결 정보를 초기화하고 초기 설정 화면으로 이동합니다. 계속하시겠습니까?')) {
+    localStorage.removeItem('consumable_cfg');
+    location.reload();
+  }
 }
 
-// =====================
-// 자동 로그인 확인
-// =====================
-window.onload = function() {
-  var saved = localStorage.getItem('supa_user');
-  if (saved) {
-    try {
-      currentUser = JSON.parse(saved);
-      showApp();
-    } catch(e) {
-      localStorage.removeItem('supa_user');
+// ── 샘플 데이터 ──────────────────────────────────────────
+async function loadSampleData() {
+  closeSettings();
+  showToast('샘플 데이터를 추가하는 중...', 'info');
+
+  const samples = [
+    { name:'A4 복사지 500매', cat:'사무용품', unit:'박스', opt:10, min:3, init:8 },
+    { name:'볼펜 (흑색)',      cat:'사무용품', unit:'개',  opt:30, min:10, init:25 },
+    { name:'화장지 (30롤)',    cat:'청소용품', unit:'팩',  opt:6,  min:2,  init:4 },
+    { name:'손세정제 500ml',   cat:'청소용품', unit:'개',  opt:10, min:3,  init:2 },
+    { name:'종이컵 (100개)',   cat:'주방용품', unit:'묶음', opt:20, min:5, init:15 },
+    { name:'USB 허브 4포트',   cat:'전산용품', unit:'개',  opt:5,  min:2,  init:3 },
+    { name:'포스트잇 100매',   cat:'사무용품', unit:'개',  opt:20, min:5,  init:1 },
+  ];
+
+  for (const s of samples) {
+    const cat = state.categories.find(c => c.name === s.cat);
+    const { data: ni, error } = await db.from('items').insert({
+      name: s.name, category_id: cat?.id || null, unit: s.unit,
+      optimal_stock: s.opt, min_stock: s.min
+    }).select('id').single();
+    if (error) continue;
+    if (s.init > 0) {
+      await db.rpc('process_inbound', {
+        p_item_id: ni.id, p_quantity: s.init,
+        p_note: '샘플 데이터', p_user: state.userName
+      });
     }
   }
-};
+  await loadAll();
+  showToast('샘플 데이터 7개가 추가되었습니다.', 'success');
+}
+
+// ============================================================
+//  확인 모달
+// ============================================================
+function openConfirm(title, msg, cb) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent   = msg;
+  confirmCallback = cb;
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  confirmCallback = null;
+}
+document.getElementById('confirmOkBtn').addEventListener('click', () => {
+  if (confirmCallback) confirmCallback();
+  closeConfirm();
+});
+
+// ============================================================
+//  토스트 알림
+// ============================================================
+function showToast(msg, type = 'info') {
+  const colors = {
+    success: 'bg-green-600',
+    error:   'bg-red-600',
+    warning: 'bg-yellow-500',
+    info:    'bg-blue-600',
+  };
+  const icons = {
+    success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
+    error:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>',
+    warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+    info:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+  };
+
+  const el = document.createElement('div');
+  el.className = `toast pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-white text-sm ${colors[type]||colors.info}`;
+  el.innerHTML = `
+    <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      ${icons[type]||icons.info}
+    </svg>
+    <span class="flex-1">${esc(msg)}</span>
+    <button onclick="this.parentElement.remove()" class="flex-shrink-0 opacity-70 hover:opacity-100">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>`;
+
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+// ── 화면 리사이즈 시 재고 테이블 다시 그리기 ─────────────
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(renderStock, 200);
+});
+
+// ── 모달 외부 클릭 닫기 ──────────────────────────────────
+['alertModal','settingsModal','confirmModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.add('hidden');
+      if (id === 'confirmModal') confirmCallback = null;
+    }
+  });
+});
+
 </script>
 </body>
 </html>
