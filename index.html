@@ -1,676 +1,1092 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>소모품 관리 시스템</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Pretendard,sans-serif;background:#eef2ff;color:#1e293b;font-size:14px;}
-
-    /* ─── LOGIN ─── */
-    #loginWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(150deg,#1e3a8a 0%,#2563eb 60%,#60a5fa 100%);padding:20px;}
-    .login-card{background:#fff;border-radius:20px;padding:40px 28px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
-    .login-logo{text-align:center;margin-bottom:28px;}
-    .login-logo .icon{font-size:42px;margin-bottom:8px;}
-    .login-logo h1{font-size:20px;font-weight:700;color:#1e3a8a;}
-    .login-logo p{font-size:12px;color:#94a3b8;margin-top:4px;}
-    .login-card label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:5px;margin-top:16px;}
-    .login-card input{width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:14px;outline:none;transition:.2s;}
-    .login-card input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
-    .btn-login{width:100%;background:linear-gradient(90deg,#1d4ed8,#2563eb);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;margin-top:24px;cursor:pointer;letter-spacing:.3px;}
-    .btn-login:active{opacity:.9;}
-    #loginErr{color:#ef4444;font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
-
-    /* ─── APP ─── */
-    #app{display:none;min-height:100vh;}
-    header{background:linear-gradient(90deg,#1e3a8a,#2563eb);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-    .header-left{display:flex;align-items:center;gap:10px;}
-    .header-left .icon{font-size:24px;}
-    .header-left h1{font-size:16px;font-weight:700;line-height:1.2;}
-    .header-left span{font-size:11px;opacity:.75;display:block;}
-    .header-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
-    #userEmail{font-size:11px;opacity:.8;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .btn-logout{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;}
-
-    /* stats */
-    .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 14px 0;}
-    .stat-card{background:#fff;border-radius:14px;padding:14px;text-align:center;border:1px solid #e2e8f0;}
-    .stat-card .label{font-size:11px;color:#64748b;margin-bottom:6px;}
-    .stat-card .val{font-size:26px;font-weight:800;color:#2563eb;}
-    .stat-card .val.warn{color:#ef4444;}
-    .stat-card .val.ok{color:#10b981;}
-
-    /* tabs */
-    .tab-nav{display:flex;background:#fff;margin:14px 14px 0;border-radius:12px;padding:4px;gap:2px;border:1px solid #e2e8f0;}
-    .tab-btn{flex:1;padding:8px 2px;border:none;background:none;border-radius:9px;font-size:11px;font-weight:600;color:#94a3b8;cursor:pointer;transition:.2s;white-space:nowrap;}
-    .tab-btn.active{background:#2563eb;color:#fff;}
-
-    .tab-content{display:none;padding:12px 14px;}
-    .tab-content.active{display:block;}
-
-    /* section card */
-    .card{background:#fff;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:12px;}
-    .card-head{padding:14px 16px 10px;font-size:13px;font-weight:700;color:#1e3a8a;border-bottom:1px solid #f1f5f9;}
-
-    /* search/filter row */
-    .filter-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
-    .filter-row input,.filter-row select{border:1.5px solid #e2e8f0;border-radius:9px;padding:9px 12px;font-size:13px;outline:none;background:#fff;}
-    .filter-row input{flex:1;min-width:120px;}
-    .filter-row select{flex:1;min-width:90px;}
-
-    /* table */
-    .tbl-wrap{overflow-x:auto;}
-    table{width:100%;border-collapse:collapse;font-size:12px;}
-    thead tr{background:#f8fafc;}
-    th{padding:9px 8px;text-align:left;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
-    td{padding:10px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
-    tr:last-child td{border-bottom:none;}
-    .badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;}
-    .badge.ok{background:#dcfce7;color:#16a34a;}
-    .badge.warn{background:#fee2e2;color:#dc2626;}
-    .btn-sm{border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;margin:1px;}
-    .btn-in{background:#dbeafe;color:#1d4ed8;}
-    .btn-out{background:#fce7f3;color:#be185d;}
-    .btn-edit{background:#fef9c3;color:#b45309;}
-    .btn-del{background:#fee2e2;color:#dc2626;}
-    .empty{text-align:center;padding:32px;color:#94a3b8;font-size:13px;}
-
-    /* form */
-    .form-group{margin-bottom:14px;}
-    .form-group label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;}
-    .form-group label .req{color:#ef4444;margin-left:2px;}
-    .form-group input,.form-group select,.form-group textarea{width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 13px;font-size:14px;outline:none;transition:.2s;background:#fff;}
-    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.08);}
-    .form-group textarea{resize:vertical;min-height:70px;}
-    .form-group .hint{font-size:11px;color:#94a3b8;margin-top:4px;}
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    .btn-primary{width:100%;background:linear-gradient(90deg,#1d4ed8,#2563eb);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;}
-    .btn-primary:active{opacity:.9;}
-    .btn-secondary{width:100%;background:#f1f5f9;color:#475569;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;}
-
-    /* history list */
-    .hist-item{padding:12px 14px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:flex-start;}
-    .hist-item:last-child{border-bottom:none;}
-    .hist-left .name{font-size:13px;font-weight:600;color:#1e293b;}
-    .hist-left .meta{font-size:11px;color:#94a3b8;margin-top:2px;}
-    .hist-right{text-align:right;}
-    .hist-right .qty{font-size:15px;font-weight:700;}
-    .hist-right .qty.in{color:#2563eb;}
-    .hist-right .qty.out{color:#dc2626;}
-    .hist-right .time{font-size:11px;color:#94a3b8;margin-top:2px;}
-
-    /* modal */
-    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center;}
-    .modal-bg.open{display:flex;}
-    .modal-box{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;}
-    .modal-title{font-size:16px;font-weight:700;color:#1e3a8a;margin-bottom:16px;}
-    .modal-actions{display:flex;gap:10px;margin-top:16px;}
-    .modal-actions .btn-primary,.modal-actions .btn-secondary{margin-top:0;}
-
-    /* toast */
-    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999;pointer-events:none;}
-    .toast-msg{background:#1e293b;color:#fff;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:500;margin-top:8px;text-align:center;opacity:0;transition:opacity .3s;white-space:nowrap;}
-    .toast-msg.show{opacity:1;}
-
-    /* TX type select */
-    .type-row{display:flex;gap:8px;margin-bottom:14px;}
-    .type-btn{flex:1;border:2px solid #e2e8f0;background:#fff;border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:.2s;}
-    .type-btn.sel-in{border-color:#2563eb;background:#dbeafe;color:#1d4ed8;}
-    .type-btn.sel-out{border-color:#dc2626;background:#fee2e2;color:#dc2626;}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>소모품 관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+        body { font-family: 'PretendardVariable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        @keyframes pulse-warning {
+            0%, 100% { background-color: #fef2f2; }
+            50%       { background-color: #fecaca; }
+        }
+        .row-critical { animation: pulse-warning 2.2s ease-in-out infinite; }
+        .row-warning  { background-color: #fef2f2; }
+        .toast-enter  { opacity: 0; transform: translateX(110%); }
+        .toast-show   { opacity: 1; transform: translateX(0); transition: all .3s ease; }
+        .toast-leave  { opacity: 0; transform: translateX(110%); transition: all .3s ease; }
+        .tx-btn-active-in  { border-color: #16a34a !important; background-color: #f0fdf4 !important; }
+        .tx-btn-active-out { border-color: #ea580c !important; background-color: #fff7ed !important; }
+        .stock-bar { transition: width 0.5s ease; }
+        tr.row-normal:hover { background-color: #f8fafc; }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #3b82f6;
+            border-color: #3b82f6;
+        }
+        /* 로그인 화면 */
+        .login-bg {
+            background: #1e3a5f;
+            min-height: 100vh;
+        }
+        /* 비밀번호 변경 모달 */
+        #pwModal { transition: opacity 0.2s; }
+    </style>
 </head>
-<body>
+<body class="bg-slate-50 min-h-screen text-gray-900">
 
-<!-- ═══════════════ LOGIN ═══════════════ -->
-<div id="loginWrap">
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="icon">📦</div>
-      <h1>소모품 관리 시스템</h1>
-      <p>관리자가 부여한 계정으로 로그인하세요</p>
+<!-- ════════════════════════════════════════════
+     로그인 화면
+════════════════════════════════════════════ -->
+<div id="loginScreen" class="login-bg flex items-center justify-center p-4 min-h-screen">
+    <div class="w-full max-w-sm">
+        <!-- 로고 -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-white">소모품 관리 시스템</h1>
+            <p class="text-blue-300 text-sm mt-1">Consumable Inventory Manager</p>
+        </div>
+
+        <!-- 로그인 카드 -->
+        <div class="bg-white rounded-2xl p-6 shadow-2xl">
+            <h2 class="text-lg font-bold text-gray-900 mb-5">로그인</h2>
+            <div id="loginError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600"></div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+                    <input type="email" id="loginEmail" placeholder="이메일 주소 입력"
+                           class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white"
+                           onkeydown="if(event.key==='Enter') doLogin()">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
+                    <input type="password" id="loginPassword" placeholder="비밀번호 입력"
+                           class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white"
+                           onkeydown="if(event.key==='Enter') doLogin()">
+                </div>
+                <button onclick="doLogin()" id="loginBtn"
+                        class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors text-sm">
+                    로그인
+                </button>
+            </div>
+        </div>
+        <p class="text-center text-blue-300 text-xs mt-4">관리자에게 계정을 요청하세요</p>
     </div>
-    <label>이메일 주소</label>
-    <input type="email" id="loginEmail" placeholder="example@company.com" autocomplete="email">
-    <label>비밀번호</label>
-    <input type="password" id="loginPw" placeholder="비밀번호 입력" autocomplete="current-password">
-    <div id="loginErr"></div>
-    <button class="btn-login" onclick="doLogin()">로그인</button>
-  </div>
 </div>
 
-<!-- ═══════════════ APP ═══════════════ -->
-<div id="app">
-  <!-- Header -->
-  <header>
-    <div class="header-left">
-      <div class="icon">📦</div>
-      <div>
-        <h1>소모품 관리</h1>
-        <span>재고 현황판</span>
-      </div>
-    </div>
-    <div class="header-right">
-      <span id="userEmail"></span>
-      <button class="btn-logout" onclick="doLogout()">로그아웃</button>
-    </div>
-  </header>
+<!-- ════════════════════════════════════════════
+     메인 앱 화면
+════════════════════════════════════════════ -->
+<div id="appScreen" class="hidden">
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat-card"><div class="label">전체 품목</div><div class="val" id="sTot">0</div></div>
-    <div class="stat-card"><div class="label">총 재고 수량</div><div class="val ok" id="sQty">0</div></div>
-    <div class="stat-card"><div class="label">재고 부족 품목</div><div class="val warn" id="sLow">0</div></div>
-    <div class="stat-card"><div class="label">오늘 입출고</div><div class="val" id="sTx">0</div></div>
-  </div>
-
-  <!-- Tab Nav -->
-  <div class="tab-nav">
-    <button class="tab-btn active" onclick="switchTab('stock')">재고 현황</button>
-    <button class="tab-btn" onclick="switchTab('reg')">소모품 등록</button>
-    <button class="tab-btn" onclick="switchTab('tx')">입출고 처리</button>
-    <button class="tab-btn" onclick="switchTab('hist')">거래 내역</button>
-  </div>
-
-  <!-- ── Tab 1: 재고 현황 ── -->
-  <div id="tab-stock" class="tab-content active">
-    <div class="filter-row">
-      <input id="srchQ" placeholder="품목명 검색..." oninput="renderItems()">
-      <select id="srchCat" onchange="renderItems()">
-        <option value="">전체 분류</option>
-        <option>사무용품</option><option>전산용품</option><option>청소용품</option>
-        <option>위생용품</option><option>주방용품</option><option>기타</option>
-      </select>
-      <select id="srchStatus" onchange="renderItems()">
-        <option value="">전체 상태</option>
-        <option value="ok">정상만</option>
-        <option value="low">부족만</option>
-      </select>
+<!-- 헤더 -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-sm font-bold text-gray-900 leading-tight">소모품 관리 시스템</h1>
+                <p id="headerEmail" class="text-xs text-gray-400 leading-tight"></p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <span id="currentDate" class="hidden sm:block text-xs text-gray-400 whitespace-nowrap"></span>
+            <!-- 비밀번호 변경 버튼 -->
+            <button onclick="openPwModal()"
+                    class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+                비밀번호 변경
+            </button>
+            <!-- 로그아웃 버튼 -->
+            <button onclick="doLogout()"
+                    class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                로그아웃
+            </button>
+        </div>
     </div>
-    <div class="card">
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>품목명</th><th>분류</th><th>현재수량</th><th>최소수량</th><th>상태</th><th>관리</th>
-            </tr>
-          </thead>
-          <tbody id="itemTbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+</header>
 
-  <!-- ── Tab 2: 소모품 등록 ── -->
-  <div id="tab-reg" class="tab-content">
-    <div class="card">
-      <div class="card-head">새 소모품 등록</div>
-      <div style="padding:16px;">
-        <div class="form-group">
-          <label>품목명<span class="req">*</span></label>
-          <input id="regName" placeholder="예: A4 용지 80g (500매/권)">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>분류<span class="req">*</span></label>
-            <select id="regCat" onchange="toggleCustomCat()">
-              <option value="">선택하세요</option>
-              <option>사무용품</option><option>전산용품</option><option>청소용품</option>
-              <option>위생용품</option><option>주방용품</option><option>기타</option>
-              <option value="__custom">직접 입력</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>단위<span class="req">*</span></label>
-            <select id="regUnit">
-              <option value="">선택하세요</option>
-              <option>개</option><option>박스</option><option>묶음</option><option>권</option>
-              <option>롤</option><option>병</option><option>팩</option><option>통</option><option>세트</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group" id="customCatWrap" style="display:none;">
-          <label>분류 직접 입력</label>
-          <input id="regCatCustom" placeholder="분류명 입력">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>초기 재고</label>
-            <input id="regInitStock" type="number" min="0" placeholder="0">
-            <div class="hint">현재 보유 수량</div>
-          </div>
-          <div class="form-group">
-            <label>최소 재고<span class="req">*</span></label>
-            <input id="regMinStock" type="number" min="0" placeholder="5">
-            <div class="hint">이하일 때 부족 표시</div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>메모</label>
-          <textarea id="regNote" placeholder="보관 위치, 규격, 발주처 등 참고 정보"></textarea>
-        </div>
-        <button class="btn-primary" onclick="doRegister()">등록하기</button>
-      </div>
-    </div>
-  </div>
+<!-- 메인 -->
+<main class="max-w-7xl mx-auto px-3 sm:px-6 py-4">
 
-  <!-- ── Tab 3: 입출고 처리 ── -->
-  <div id="tab-tx" class="tab-content">
-    <div class="card">
-      <div class="card-head">입출고 처리</div>
-      <div style="padding:16px;">
-        <div class="form-group">
-          <label>품목 선택<span class="req">*</span></label>
-          <select id="txItem">
-            <option value="">-- 품목을 선택하세요 --</option>
-          </select>
+    <!-- 대시보드 카드 -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">전체 품목</p>
+            <p id="statTotalItems" class="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">0</p>
+            <p class="text-xs text-gray-400 mt-1">등록된 소모품 종류</p>
         </div>
-        <div class="form-group">
-          <label>구분<span class="req">*</span></label>
-          <div class="type-row">
-            <button class="type-btn" id="btnIn" onclick="selType('in')">📥 입고</button>
-            <button class="type-btn" id="btnOut" onclick="selType('out')">📤 출고</button>
-          </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">재고 부족</p>
+            <p id="statLowStock" class="text-2xl sm:text-3xl font-bold text-red-500 mt-1">0</p>
+            <p class="text-xs text-gray-400 mt-1">적정 재고 미만 품목</p>
         </div>
-        <div class="form-group">
-          <label>수량<span class="req">*</span></label>
-          <input id="txQty" type="number" min="1" placeholder="수량을 입력하세요">
+        <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">오늘 입고</p>
+            <p id="statTodayIn" class="text-2xl sm:text-3xl font-bold text-emerald-500 mt-1">0</p>
+            <p class="text-xs text-gray-400 mt-1">건 처리 완료</p>
         </div>
-        <div class="form-group">
-          <label>담당자</label>
-          <input id="txHandler" placeholder="담당자 이름 또는 부서">
+        <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">오늘 출고</p>
+            <p id="statTodayOut" class="text-2xl sm:text-3xl font-bold text-orange-500 mt-1">0</p>
+            <p class="text-xs text-gray-400 mt-1">건 처리 완료</p>
         </div>
-        <div class="form-group">
-          <label>메모</label>
-          <input id="txNote" placeholder="사유, 프로젝트명, 부서 등">
-        </div>
-        <button class="btn-primary" onclick="doTx()">처리 완료</button>
-      </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- ── Tab 4: 거래 내역 ── -->
-  <div id="tab-hist" class="tab-content">
-    <div class="filter-row">
-      <select id="hTypeFilter" onchange="renderHistory()">
-        <option value="">전체</option>
-        <option value="입고">입고만</option>
-        <option value="출고">출고만</option>
-      </select>
-      <select id="hItemFilter" onchange="renderHistory()">
-        <option value="">전체 품목</option>
-      </select>
+    <!-- 탭 패널 -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <nav class="flex border-b border-gray-200 overflow-x-auto">
+            <button onclick="switchTab('inventory')" id="tab-inventory"
+                class="tab-btn shrink-0 flex items-center gap-1.5 px-4 sm:px-5 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                재고 현황
+            </button>
+            <button onclick="switchTab('register')" id="tab-register"
+                class="tab-btn shrink-0 flex items-center gap-1.5 px-4 sm:px-5 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                소모품 등록
+            </button>
+            <button onclick="switchTab('transaction')" id="tab-transaction"
+                class="tab-btn shrink-0 flex items-center gap-1.5 px-4 sm:px-5 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                </svg>
+                입출고 처리
+            </button>
+            <button onclick="switchTab('history')" id="tab-history"
+                class="tab-btn shrink-0 flex items-center gap-1.5 px-4 sm:px-5 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                거래 내역
+            </button>
+        </nav>
+
+        <!-- 탭 1: 재고 현황 -->
+        <section id="content-inventory" class="tab-content p-4 sm:p-5">
+            <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                <div class="relative flex-1">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="품목명으로 검색..."
+                           oninput="renderInventoryTable()"
+                           class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                </div>
+                <select id="filterCategory" onchange="renderInventoryTable()"
+                        class="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white min-w-[110px]">
+                    <option value="">전체 분류</option>
+                </select>
+                <select id="filterStatus" onchange="renderInventoryTable()"
+                        class="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white min-w-[110px]">
+                    <option value="">전체 상태</option>
+                    <option value="normal">정상만</option>
+                    <option value="warning">부족만</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="w-full text-sm min-w-[680px]">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="text-left px-3 py-3 font-semibold text-gray-600 w-8">#</th>
+                            <th class="text-left px-3 py-3 font-semibold text-gray-600">품목명</th>
+                            <th class="text-left px-3 py-3 font-semibold text-gray-600">분류</th>
+                            <th class="text-right px-3 py-3 font-semibold text-gray-600">현재 재고</th>
+                            <th class="text-right px-3 py-3 font-semibold text-gray-600">적정 재고</th>
+                            <th class="text-center px-3 py-3 font-semibold text-gray-600 w-28">재고 바</th>
+                            <th class="text-center px-3 py-3 font-semibold text-gray-600">상태</th>
+                            <th class="text-center px-3 py-3 font-semibold text-gray-600">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTableBody"></tbody>
+                </table>
+            </div>
+            <div id="emptyInventory" class="hidden text-center py-14">
+                <svg class="w-12 h-12 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+                <p class="text-sm text-gray-400 mb-2">등록된 소모품이 없습니다.</p>
+                <button onclick="switchTab('register')" class="text-sm text-blue-600 hover:underline">
+                    소모품 등록하러 가기 →
+                </button>
+            </div>
+        </section>
+
+        <!-- 탭 2: 소모품 등록 -->
+        <section id="content-register" class="tab-content p-4 sm:p-5">
+            <div class="max-w-xl mx-auto">
+                <div class="mb-5">
+                    <h2 class="text-base font-bold text-gray-900">새 소모품 등록</h2>
+                    <p class="text-sm text-gray-500 mt-0.5">소모품의 기본 정보와 초기 재고를 설정합니다.</p>
+                </div>
+                <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4" novalidate>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            품목명 <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" id="regName" placeholder="예: A4 용지 80g (500매/권)"
+                               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                        <p class="text-xs text-gray-400 mt-1">규격, 사양을 포함하면 구별이 쉽습니다.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            분류 <span class="text-red-400">*</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <select id="regCategory"
+                                    class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                                <option value="">선택하세요</option>
+                                <option value="사무용품">사무용품</option>
+                                <option value="전산용품">전산용품</option>
+                                <option value="청소용품">청소용품</option>
+                                <option value="위생용품">위생용품</option>
+                                <option value="주방용품">주방용품</option>
+                                <option value="기타">기타</option>
+                            </select>
+                            <input type="text" id="regCategoryCustom" placeholder="분류 직접 입력"
+                                   class="flex-1 hidden px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                            <button type="button" onclick="toggleCustomCategory()" id="customCatToggleBtn"
+                                    class="shrink-0 px-3 py-2 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors">
+                                직접 입력
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">단위</label>
+                        <select id="regUnit" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                            <option value="개">개</option>
+                            <option value="박스">박스</option>
+                            <option value="묶음">묶음</option>
+                            <option value="권">권</option>
+                            <option value="롤">롤</option>
+                            <option value="병">병</option>
+                            <option value="팩">팩</option>
+                            <option value="통">통</option>
+                            <option value="세트">세트</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                초기 재고 <span class="text-red-400">*</span>
+                            </label>
+                            <input type="number" id="regInitStock" min="0" value="0"
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                적정 재고 <span class="text-red-400">*</span>
+                            </label>
+                            <input type="number" id="regMinStock" min="1" value="10"
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                            <p class="text-xs text-gray-400 mt-1">이 수량 미만 시 경고</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">메모 (선택)</label>
+                        <textarea id="regNote" rows="2" placeholder="보관 위치, 규격, 발주처 등"
+                                  class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white resize-none"></textarea>
+                    </div>
+                    <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors">
+                        소모품 등록
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 탭 3: 입출고 처리 -->
+        <section id="content-transaction" class="tab-content p-4 sm:p-5">
+            <div class="max-w-xl mx-auto">
+                <div class="mb-5">
+                    <h2 class="text-base font-bold text-gray-900">입출고 처리</h2>
+                    <p class="text-sm text-gray-500 mt-0.5">품목을 선택한 후 입고 또는 출고 수량을 입력하세요.</p>
+                </div>
+                <form id="txForm" onsubmit="handleTransaction(event)" class="space-y-4" novalidate>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">처리 유형</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="txType" value="inbound" class="sr-only" checked>
+                                <div class="tx-type-card border-2 rounded-lg p-3 text-center transition-colors" data-type="inbound">
+                                    <p class="text-lg font-bold text-emerald-500">↑ 입고</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">재고 수량 증가</p>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="txType" value="outbound" class="sr-only">
+                                <div class="tx-type-card border-2 rounded-lg p-3 text-center transition-colors" data-type="outbound">
+                                    <p class="text-lg font-bold text-orange-500">↓ 출고</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">재고 수량 감소</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            품목 선택 <span class="text-red-400">*</span>
+                        </label>
+                        <select id="txItemId" onchange="onTxItemChange()"
+                                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                            <option value="">-- 품목을 선택하세요 --</option>
+                        </select>
+                        <div id="txItemPreview"
+                             class="hidden mt-2 p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm grid grid-cols-2 gap-2">
+                            <div>
+                                <span class="text-xs text-gray-400 block">현재 재고</span>
+                                <span id="txPreviewCurrent" class="font-semibold text-gray-900">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-gray-400 block">적정 재고</span>
+                                <span id="txPreviewMin" class="font-semibold text-gray-900">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            수량 <span class="text-red-400">*</span>
+                        </label>
+                        <input type="number" id="txQty" min="1" placeholder="수량을 입력하세요"
+                               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">처리자</label>
+                        <input type="text" id="txHandler" placeholder="담당자 이름 또는 부서"
+                               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">비고</label>
+                        <input type="text" id="txNote" placeholder="사유, 프로젝트명, 부서 등"
+                               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
+                    </div>
+                    <button type="submit" id="txSubmitBtn"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors">
+                        처리 완료
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 탭 4: 거래 내역 -->
+        <section id="content-history" class="tab-content p-4 sm:p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-bold text-gray-900">거래 내역</h2>
+                <div class="flex items-center gap-2">
+                    <select id="historyTypeFilter" onchange="renderHistory()"
+                            class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white">
+                        <option value="">전체</option>
+                        <option value="inbound">입고만</option>
+                        <option value="outbound">출고만</option>
+                    </select>
+                    <select id="historyItemFilter" onchange="renderHistory()"
+                            class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white max-w-[140px]">
+                        <option value="">전체 품목</option>
+                    </select>
+                </div>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="w-full text-sm min-w-[620px]">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="text-left px-3 py-3 font-semibold text-gray-600">일시</th>
+                            <th class="text-left px-3 py-3 font-semibold text-gray-600">품목명</th>
+                            <th class="text-center px-3 py-3 font-semibold text-gray-600">유형</th>
+                            <th class="text-right px-3 py-3 font-semibold text-gray-600">수량</th>
+                            <th class="text-right px-3 py-3 font-semibold text-gray-600">처리 후 재고</th>
+                            <th class="text-left px-3 py-3 font-semibold text-gray-600">처리자</th>
+                            <th class="text-left px-3 py-3 font-semibold text-gray-600">비고</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
+            </div>
+            <div id="emptyHistory" class="hidden text-center py-14">
+                <p class="text-sm text-gray-400">거래 내역이 없습니다.</p>
+            </div>
+        </section>
     </div>
-    <div class="card" id="histList"></div>
-  </div>
+</main>
+</div><!-- /appScreen -->
+
+
+<!-- ════════════════════════════════════════════
+     비밀번호 변경 모달
+════════════════════════════════════════════ -->
+<div id="pwModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full" onclick="event.stopPropagation()">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-gray-900">비밀번호 변경</h3>
+                <p class="text-xs text-gray-400 mt-0.5">새 비밀번호를 입력하세요</p>
+            </div>
+            <button onclick="closePwModal()" class="ml-auto text-gray-300 hover:text-gray-500 text-xl leading-none">&times;</button>
+        </div>
+
+        <div id="pwError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600"></div>
+        <div id="pwSuccess" class="hidden mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-600"></div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+                <input type="password" id="newPw" placeholder="새 비밀번호 입력 (6자 이상)"
+                       class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 확인</label>
+                <input type="password" id="newPwConfirm" placeholder="새 비밀번호 재입력"
+                       class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white"
+                       onkeydown="if(event.key==='Enter') changePw()">
+            </div>
+            <div class="flex gap-2 pt-1">
+                <button onclick="closePwModal()"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                    취소
+                </button>
+                <button onclick="changePw()" id="pwSubmitBtn"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                    변경 완료
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- ═══════════ MODAL: 수정 ═══════════ -->
-<div class="modal-bg" id="editModal">
-  <div class="modal-box">
-    <div class="modal-title">소모품 수정</div>
-    <input type="hidden" id="editId">
-    <div class="form-group"><label>품목명<span class="req">*</span></label><input id="editName"></div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>분류</label>
-        <select id="editCat">
-          <option>사무용품</option><option>전산용품</option><option>청소용품</option>
-          <option>위생용품</option><option>주방용품</option><option>기타</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>단위</label>
-        <select id="editUnit">
-          <option>개</option><option>박스</option><option>묶음</option><option>권</option>
-          <option>롤</option><option>병</option><option>팩</option><option>통</option><option>세트</option>
-        </select>
-      </div>
+<!-- 삭제 확인 모달 -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+     onclick="onModalBackdropClick(event)">
+    <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full" onclick="event.stopPropagation()">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-gray-900">소모품 삭제</h3>
+                <p id="deleteModalMsg" class="text-sm text-gray-500 mt-1">이 소모품을 삭제하시겠습니까?</p>
+            </div>
+        </div>
+        <div class="flex gap-2 mt-5">
+            <button onclick="closeDeleteModal()"
+                    class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                취소
+            </button>
+            <button onclick="confirmDelete()"
+                    class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
+                삭제 확인
+            </button>
+        </div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label>현재 재고</label><input id="editStock" type="number" min="0"></div>
-      <div class="form-group"><label>최소 재고</label><input id="editMinStock" type="number" min="0"></div>
-    </div>
-    <div class="form-group"><label>메모</label><textarea id="editNote"></textarea></div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeModal('editModal')">취소</button>
-      <button class="btn-primary" onclick="doEdit()">저장</button>
-    </div>
-  </div>
 </div>
 
-<!-- ═══════════ MODAL: 삭제 확인 ═══════════ -->
-<div class="modal-bg" id="delModal">
-  <div class="modal-box">
-    <div class="modal-title">⚠️ 소모품 삭제</div>
-    <p style="color:#64748b;font-size:14px;line-height:1.6;">
-      <strong id="delItemName"></strong>을(를) 삭제하면<br>관련 거래 이력도 모두 삭제됩니다.<br>정말 삭제하시겠습니까?
-    </p>
-    <input type="hidden" id="delId">
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeModal('delModal')">취소</button>
-      <button class="btn-primary" style="background:#ef4444;" onclick="doDelete()">삭제</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div id="toast"></div>
+<!-- 토스트 -->
+<div id="toastContainer" class="fixed bottom-6 right-4 flex flex-col gap-2 z-50 pointer-events-none" aria-live="polite"></div>
 
 <script>
-const SURL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-const SKEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
-const sb = supabase.createClient(SURL, SKEY);
+'use strict';
 
+/* ─── Supabase 설정 ─── */
+const SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
+
+async function sbFetch(path, options = {}) {
+    const res = await fetch(SUPABASE_URL + path, {
+        ...options,
+        headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + (currentSession?.access_token || SUPABASE_KEY),
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+            ...(options.headers || {})
+        }
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch(e) {}
+    return { ok: res.ok, status: res.status, data };
+}
+
+/* ─── 전역 상태 ─── */
+let currentSession = null;
 let items = [];
-let txHistory = [];
-let currentTxType = '';
+let transactions = [];
+let pendingDeleteId = null;
+let isCustomCategory = false;
 
-/* ─── AUTH ─── */
+/* ─── 로그인 ─── */
 async function doLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw = document.getElementById('loginPw').value;
-  document.getElementById('loginErr').textContent = '';
-  if (!email || !pw) { document.getElementById('loginErr').textContent = '이메일과 비밀번호를 입력해주세요.'; return; }
-  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-  if (error) { document.getElementById('loginErr').textContent = '이메일 또는 비밀번호가 올바르지 않습니다.'; return; }
-  showApp(email);
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+
+    if (!email || !password) {
+        errEl.textContent = '이메일과 비밀번호를 입력하세요.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    btn.textContent = '로그인 중...';
+    btn.disabled = true;
+    errEl.classList.add('hidden');
+
+    try {
+        const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        currentSession = data;
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appScreen').classList.remove('hidden');
+        document.getElementById('headerEmail').textContent = email;
+        document.getElementById('currentDate').textContent =
+            new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+
+        bindTxTypeButtons();
+        await loadItems();
+        await loadTransactions();
+        switchTab('inventory');
+        updateStats();
+
+    } catch(e) {
+        errEl.textContent = '네트워크 오류가 발생했습니다.';
+        errEl.classList.remove('hidden');
+    } finally {
+        btn.textContent = '로그인';
+        btn.disabled = false;
+    }
 }
 
+/* ─── 로그아웃 ─── */
 async function doLogout() {
-  await sb.auth.signOut();
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('loginWrap').style.display = 'flex';
+    if (!confirm('로그아웃 하시겠습니까?')) return;
+    await fetch(SUPABASE_URL + '/auth/v1/logout', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + currentSession?.access_token }
+    });
+    currentSession = null;
+    items = [];
+    transactions = [];
+    document.getElementById('appScreen').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
 }
 
-async function showApp(email) {
-  document.getElementById('loginWrap').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('userEmail').textContent = email;
-  await loadAll();
+/* ─── 비밀번호 변경 모달 ─── */
+function openPwModal() {
+    document.getElementById('newPw').value = '';
+    document.getElementById('newPwConfirm').value = '';
+    document.getElementById('pwError').classList.add('hidden');
+    document.getElementById('pwSuccess').classList.add('hidden');
+    document.getElementById('pwModal').classList.remove('hidden');
 }
 
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (session && event === 'SIGNED_IN') {
-    showApp(session.user.email);
-  }
-});
-
-/* ─── LOAD ─── */
-async function loadAll() {
-  await Promise.all([loadItems(), loadHistory()]);
-  updateStats();
-  renderItems();
-  renderHistory();
-  renderTxSelect();
-  renderHistItemFilter();
+function closePwModal() {
+    document.getElementById('pwModal').classList.add('hidden');
 }
 
+async function changePw() {
+    const newPw = document.getElementById('newPw').value;
+    const confirm2 = document.getElementById('newPwConfirm').value;
+    const errEl = document.getElementById('pwError');
+    const sucEl = document.getElementById('pwSuccess');
+    const btn = document.getElementById('pwSubmitBtn');
+
+    errEl.classList.add('hidden');
+    sucEl.classList.add('hidden');
+
+    if (!newPw || newPw.length < 6) {
+        errEl.textContent = '비밀번호는 6자 이상이어야 합니다.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+    if (newPw !== confirm2) {
+        errEl.textContent = '비밀번호가 일치하지 않습니다.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    btn.textContent = '변경 중...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+            method: 'PUT',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': 'Bearer ' + currentSession.access_token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: newPw })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            errEl.textContent = '변경 실패: ' + (data.message || '다시 시도해주세요.');
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        sucEl.textContent = '비밀번호가 성공적으로 변경되었습니다!';
+        sucEl.classList.remove('hidden');
+        showToast('비밀번호 변경 완료!', 'success');
+
+        setTimeout(() => closePwModal(), 2000);
+
+    } catch(e) {
+        errEl.textContent = '네트워크 오류가 발생했습니다.';
+        errEl.classList.remove('hidden');
+    } finally {
+        btn.textContent = '변경 완료';
+        btn.disabled = false;
+    }
+}
+
+/* ─── Supabase 데이터 로드 ─── */
 async function loadItems() {
-  const { data, error } = await sb.from('items').select('*').order('created_at', { ascending: false });
-  if (!error) items = data || [];
+    const { ok, data } = await sbFetch('/rest/v1/items?select=*&order=created_at.asc');
+    if (ok && Array.isArray(data)) {
+        items = data.map(r => ({
+            id: r.id,
+            name: r.name,
+            category: r.category || '기타',
+            unit: r.unit || '개',
+            currentStock: r.quantity || 0,
+            minStock: r.min_qty || 0,
+            note: r.note || '',
+            createdAt: r.created_at,
+            updatedAt: r.created_at
+        }));
+    }
 }
 
-async function loadHistory() {
-  const { data, error } = await sb.from('history').select('*').order('created_at', { ascending: false }).limit(200);
-  if (!error) txHistory = data || [];
+async function loadTransactions() {
+    const { ok, data } = await sbFetch('/rest/v1/history?select=*&order=created_at.desc&limit=200');
+    if (ok && Array.isArray(data)) {
+        transactions = data.map(r => ({
+            id: r.id,
+            itemId: r.item_id,
+            itemName: r.item_name,
+            type: r.type === 'in' ? 'inbound' : 'outbound',
+            quantity: r.quantity || 0,
+            stockAfter: r.quantity || 0,
+            handler: r.handler || '-',
+            note: r.memo || '-',
+            date: r.created_at
+        }));
+    }
 }
 
-/* ─── STATS ─── */
-function updateStats() {
-  const today = new Date().toISOString().slice(0, 10);
-  document.getElementById('sTot').textContent = items.length;
-  document.getElementById('sQty').textContent = items.reduce((s, i) => s + (i.quantity || 0), 0);
-  document.getElementById('sLow').textContent = items.filter(i => (i.quantity || 0) <= (i.min_qty || 0)).length;
-  document.getElementById('sTx').textContent = txHistory.filter(t => (t.created_at || '').startsWith(today)).length;
+/* ─── 유틸 ─── */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function fmtDate(iso) {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    const mo = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return mo+'/'+dd+' '+hh+':'+mm;
+}
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function esc(str) {
+    return String(str ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ─── TAB ─── */
+/* ─── 탭 전환 ─── */
 function switchTab(id) {
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    const ids = ['stock', 'reg', 'tx', 'hist'];
-    b.classList.toggle('active', ids[i] === id);
-  });
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-blue-600','text-blue-600');
+        btn.classList.add('border-transparent','text-gray-500');
+    });
+    document.getElementById('content-'+id).classList.add('active');
+    const activeBtn = document.getElementById('tab-'+id);
+    activeBtn.classList.remove('border-transparent','text-gray-500');
+    activeBtn.classList.add('border-blue-600','text-blue-600');
+    if (id === 'inventory')   renderInventoryTable();
+    if (id === 'transaction') populateTxItemSelect();
+    if (id === 'history')     { populateHistoryItemFilter(); renderHistory(); }
 }
 
-/* ─── RENDER ITEMS ─── */
-function renderItems() {
-  const q = (document.getElementById('srchQ').value || '').toLowerCase();
-  const cat = document.getElementById('srchCat').value;
-  const status = document.getElementById('srchStatus').value;
-  const filtered = items.filter(i => {
-    if (q && !(i.name || '').toLowerCase().includes(q)) return false;
-    if (cat && i.category !== cat) return false;
-    if (status === 'ok' && (i.quantity || 0) <= (i.min_qty || 0)) return false;
-    if (status === 'low' && (i.quantity || 0) > (i.min_qty || 0)) return false;
-    return true;
-  });
-  const tbody = document.getElementById('itemTbody');
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">등록된 품목이 없습니다.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = filtered.map(i => {
-    const isLow = (i.quantity || 0) <= (i.min_qty || 0);
-    return `<tr>
-      <td><strong>${esc(i.name)}</strong><br><span style="font-size:10px;color:#94a3b8;">${esc(i.unit||'')} ${i.note ? '· '+esc(i.note) : ''}</span></td>
-      <td>${esc(i.category||'')}</td>
-      <td style="font-weight:700;color:${isLow?'#dc2626':'#1e293b'}">${i.quantity||0}</td>
-      <td>${i.min_qty||0}</td>
-      <td><span class="badge ${isLow?'warn':'ok'}">${isLow?'부족':'정상'}</span></td>
-      <td>
-        <button class="btn-sm btn-in" onclick="quickTx('${i.id}','in')">입고</button>
-        <button class="btn-sm btn-out" onclick="quickTx('${i.id}','out')">출고</button>
-        <button class="btn-sm btn-edit" onclick="openEdit('${i.id}')">수정</button>
-        <button class="btn-sm btn-del" onclick="openDel('${i.id}')">삭제</button>
-      </td>
-    </tr>`;
-  }).join('');
+/* ─── 통계 ─── */
+function updateStats() {
+    const today = todayISO();
+    document.getElementById('statTotalItems').textContent = items.length;
+    document.getElementById('statLowStock').textContent = items.filter(i => i.currentStock < i.minStock).length;
+    document.getElementById('statTodayIn').textContent =
+        transactions.filter(t => t.type === 'inbound' && (t.date||'').startsWith(today)).length;
+    document.getElementById('statTodayOut').textContent =
+        transactions.filter(t => t.type === 'outbound' && (t.date||'').startsWith(today)).length;
 }
 
-/* ─── REGISTER ─── */
-function toggleCustomCat() {
-  const v = document.getElementById('regCat').value;
-  document.getElementById('customCatWrap').style.display = v === '__custom' ? 'block' : 'none';
+/* ─── 재고 현황 테이블 ─── */
+function renderInventoryTable() {
+    const search    = document.getElementById('searchInput').value.trim().toLowerCase();
+    const catFilter = document.getElementById('filterCategory').value;
+    const stFilter  = document.getElementById('filterStatus').value;
+    syncCategoryFilter();
+    const filtered = items.filter(item => {
+        const matchSearch = item.name.toLowerCase().includes(search);
+        const matchCat    = !catFilter || item.category === catFilter;
+        const isLow       = item.currentStock < item.minStock;
+        const matchStatus = !stFilter || (stFilter==='normal' && !isLow) || (stFilter==='warning' && isLow);
+        return matchSearch && matchCat && matchStatus;
+    });
+    const tbody = document.getElementById('inventoryTableBody');
+    const empty = document.getElementById('emptyInventory');
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+    tbody.innerHTML = filtered.map((item, idx) => {
+        const isLow      = item.currentStock < item.minStock;
+        const isCritical = item.currentStock < item.minStock * 0.5;
+        const pct      = item.minStock > 0 ? Math.min(150, Math.round((item.currentStock/item.minStock)*100)) : 0;
+        const barPct   = Math.min(100, pct);
+        const barColor = isCritical ? 'bg-red-500' : isLow ? 'bg-amber-400' : 'bg-emerald-500';
+        const rowClass  = isCritical ? 'row-critical' : isLow ? 'row-warning' : 'row-normal';
+        const badge = isCritical
+            ? '<span class="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700">긴급 부족</span>'
+            : isLow
+            ? '<span class="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">부족</span>'
+            : '<span class="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">정상</span>';
+        return '<tr class="'+rowClass+' border-t border-gray-100 transition-colors">'+
+            '<td class="px-3 py-3 text-xs text-gray-400">'+(idx+1)+'</td>'+
+            '<td class="px-3 py-3"><p class="font-semibold text-gray-900">'+esc(item.name)+'</p>'+(item.note?'<p class="text-xs text-gray-400 mt-0.5 max-w-xs truncate">'+esc(item.note)+'</p>':'')+'</td>'+
+            '<td class="px-3 py-3"><span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">'+esc(item.category)+'</span></td>'+
+            '<td class="px-3 py-3 text-right font-bold text-base '+(isLow?'text-red-600':'text-gray-900')+'">'+item.currentStock.toLocaleString()+'<span class="text-xs font-normal text-gray-400 ml-0.5">'+esc(item.unit)+'</span></td>'+
+            '<td class="px-3 py-3 text-right text-gray-500 text-sm">'+item.minStock.toLocaleString()+'<span class="text-xs text-gray-400 ml-0.5">'+esc(item.unit)+'</span></td>'+
+            '<td class="px-3 py-3"><div class="flex items-center gap-2"><div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden"><div class="'+barColor+' stock-bar h-2 rounded-full" style="width:'+barPct+'%"></div></div><span class="text-xs text-gray-400 w-9 text-right shrink-0">'+pct+'%</span></div></td>'+
+            '<td class="px-3 py-3 text-center">'+badge+'</td>'+
+            '<td class="px-3 py-3 text-center"><button onclick="openDeleteModal(''+item.id+'')" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">삭제</button></td>'+
+            '</tr>';
+    }).join('');
 }
 
-async function doRegister() {
-  const name = document.getElementById('regName').value.trim();
-  let cat = document.getElementById('regCat').value;
-  if (cat === '__custom') cat = document.getElementById('regCatCustom').value.trim();
-  const unit = document.getElementById('regUnit').value;
-  const initStock = parseInt(document.getElementById('regInitStock').value) || 0;
-  const minStock = parseInt(document.getElementById('regMinStock').value) || 0;
-  const note = document.getElementById('regNote').value.trim();
-  if (!name) { toast('품목명을 입력해주세요.', 'warn'); return; }
-  if (!cat) { toast('분류를 선택해주세요.', 'warn'); return; }
-  if (!unit) { toast('단위를 선택해주세요.', 'warn'); return; }
-  const { data, error } = await sb.from('items').insert({
-    name, category: cat, unit, quantity: initStock, min_qty: minStock, note
-  }).select().single();
-  if (error) { toast('등록 실패: ' + error.message, 'err'); return; }
-  if (initStock > 0) {
-    await sb.from('history').insert({ item_id: data.id, item_name: name, type: '입고', quantity: initStock, handler: '초기등록', note: '초기재고' });
-  }
-  document.getElementById('regName').value = '';
-  document.getElementById('regCat').value = '';
-  document.getElementById('regUnit').value = '';
-  document.getElementById('regInitStock').value = '';
-  document.getElementById('regMinStock').value = '';
-  document.getElementById('regNote').value = '';
-  document.getElementById('customCatWrap').style.display = 'none';
-  toast('✅ ' + name + ' 등록 완료!');
-  await loadAll();
-  switchTab('stock');
+function syncCategoryFilter() {
+    const sel = document.getElementById('filterCategory');
+    const cur = sel.value;
+    const cats = [...new Set(items.map(i => i.category))].sort();
+    sel.innerHTML = '<option value="">전체 분류</option>' + cats.map(c => '<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
+    if (cats.includes(cur)) sel.value = cur;
 }
 
-/* ─── TX ─── */
-function selType(t) {
-  currentTxType = t;
-  document.getElementById('btnIn').className = 'type-btn' + (t==='in'?' sel-in':'');
-  document.getElementById('btnOut').className = 'type-btn' + (t==='out'?' sel-out':'');
+/* ─── 소모품 등록 ─── */
+function toggleCustomCategory() {
+    isCustomCategory = !isCustomCategory;
+    document.getElementById('regCategory').classList.toggle('hidden', isCustomCategory);
+    document.getElementById('regCategoryCustom').classList.toggle('hidden', !isCustomCategory);
+    document.getElementById('customCatToggleBtn').textContent = isCustomCategory ? '목록 선택' : '직접 입력';
 }
 
-function renderTxSelect() {
-  const sel = document.getElementById('txItem');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">-- 품목을 선택하세요 --</option>' +
-    items.map(i => `<option value="${i.id}">${esc(i.name)} (현재: ${i.quantity||0}${i.unit||''})</option>`).join('');
-  if (cur) sel.value = cur;
+async function handleRegister(e) {
+    e.preventDefault();
+    const name = document.getElementById('regName').value.trim();
+    if (!name) { showToast('품목명을 입력하세요.', 'error'); return; }
+    const category = isCustomCategory
+        ? document.getElementById('regCategoryCustom').value.trim()
+        : document.getElementById('regCategory').value;
+    if (!category) { showToast('분류를 선택하거나 입력하세요.', 'error'); return; }
+    const unit      = document.getElementById('regUnit').value;
+    const initStock = Math.max(0, parseInt(document.getElementById('regInitStock').value) || 0);
+    const minStock  = parseInt(document.getElementById('regMinStock').value) || 0;
+    if (minStock < 1) { showToast('적정 재고는 1 이상이어야 합니다.', 'error'); return; }
+    const note = document.getElementById('regNote').value.trim();
+
+    const payload = { name, category, unit, quantity: initStock, min_qty: minStock, note };
+    const { ok, data } = await sbFetch('/rest/v1/items', { method: 'POST', body: JSON.stringify(payload) });
+    if (!ok) { showToast('등록 실패: 다시 시도해주세요.', 'error'); return; }
+
+    if (initStock > 0 && data && data[0]) {
+        await sbFetch('/rest/v1/history', {
+            method: 'POST',
+            body: JSON.stringify({ item_id: data[0].id, item_name: name, type: 'in', quantity: initStock, memo: '초기 재고 등록', handler: '시스템' })
+        });
+    }
+
+    await loadItems();
+    await loadTransactions();
+    updateStats();
+    showToast('"'+name+'" 등록 완료!', 'success');
+    e.target.reset();
+    document.getElementById('regMinStock').value = '10';
+    if (isCustomCategory) toggleCustomCategory();
 }
 
-async function doTx() {
-  const itemId = document.getElementById('txItem').value;
-  const qty = parseInt(document.getElementById('txQty').value);
-  const handler = document.getElementById('txHandler').value.trim();
-  const note = document.getElementById('txNote').value.trim();
-  if (!itemId) { toast('품목을 선택해주세요.', 'warn'); return; }
-  if (!currentTxType) { toast('입고/출고를 선택해주세요.', 'warn'); return; }
-  if (!qty || qty < 1) { toast('수량을 입력해주세요.', 'warn'); return; }
-  const item = items.find(i => i.id === itemId);
-  if (!item) return;
-  if (currentTxType === 'out' && (item.quantity || 0) < qty) { toast('재고 수량이 부족합니다.', 'warn'); return; }
-  const newQty = currentTxType === 'in' ? (item.quantity||0) + qty : (item.quantity||0) - qty;
-  const { error: e1 } = await sb.from('items').update({ quantity: newQty }).eq('id', itemId);
-  if (e1) { toast('처리 실패: ' + e1.message, 'err'); return; }
-  const { data: sess } = await sb.auth.getSession();
-  await sb.from('history').insert({
-    item_id: itemId, item_name: item.name,
-    type: currentTxType === 'in' ? '입고' : '출고',
-    quantity: qty, handler, note,
-    user_email: sess?.session?.user?.email || ''
-  });
-  document.getElementById('txItem').value = '';
-  document.getElementById('txQty').value = '';
-  document.getElementById('txHandler').value = '';
-  document.getElementById('txNote').value = '';
-  selType('');
-  toast('✅ ' + (currentTxType==='in'?'입고':'출고') + ' 처리 완료!');
-  await loadAll();
+/* ─── 입출고 처리 ─── */
+function populateTxItemSelect() {
+    const sel = document.getElementById('txItemId');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">-- 품목을 선택하세요 --</option>' +
+        items.map(item => {
+            const warn = item.currentStock < item.minStock ? ' ⚠' : '';
+            return '<option value="'+item.id+'">'+esc(item.name)+' (현재: '+item.currentStock+item.unit+')'+warn+'</option>';
+        }).join('');
+    if (cur && items.find(i => i.id === cur)) sel.value = cur;
+    onTxItemChange();
 }
 
-function quickTx(id, type) {
-  switchTab('tx');
-  document.getElementById('txItem').value = id;
-  selType(type);
+function onTxItemChange() {
+    const itemId  = document.getElementById('txItemId').value;
+    const preview = document.getElementById('txItemPreview');
+    if (!itemId) { preview.classList.add('hidden'); return; }
+    const item = items.find(i => i.id === itemId);
+    if (!item)  { preview.classList.add('hidden'); return; }
+    preview.classList.remove('hidden');
+    document.getElementById('txPreviewCurrent').textContent = item.currentStock.toLocaleString()+' '+item.unit;
+    document.getElementById('txPreviewMin').textContent     = item.minStock.toLocaleString()+' '+item.unit;
 }
 
-/* ─── HISTORY ─── */
-function renderHistItemFilter() {
-  const sel = document.getElementById('hItemFilter');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">전체 품목</option>' +
-    items.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
-  if (cur) sel.value = cur;
+function bindTxTypeButtons() {
+    document.querySelectorAll('input[name="txType"]').forEach(radio => {
+        radio.addEventListener('change', updateTxTypeBtnUI);
+    });
+    updateTxTypeBtnUI();
+}
+
+function updateTxTypeBtnUI() {
+    const selected = document.querySelector('input[name="txType"]:checked')?.value;
+    document.querySelectorAll('.tx-type-card').forEach(card => {
+        card.classList.remove('tx-btn-active-in','tx-btn-active-out','border-gray-200');
+        card.classList.add('border-gray-200');
+    });
+    if (selected) {
+        const activeCard = document.querySelector('.tx-type-card[data-type="'+selected+'"]');
+        if (activeCard) {
+            activeCard.classList.remove('border-gray-200');
+            activeCard.classList.add(selected==='inbound' ? 'tx-btn-active-in' : 'tx-btn-active-out');
+        }
+    }
+}
+
+async function handleTransaction(e) {
+    e.preventDefault();
+    const type    = document.querySelector('input[name="txType"]:checked')?.value;
+    const itemId  = document.getElementById('txItemId').value;
+    const qty     = parseInt(document.getElementById('txQty').value) || 0;
+    const handler = document.getElementById('txHandler').value.trim() || '-';
+    const note    = document.getElementById('txNote').value.trim()    || '-';
+
+    if (!itemId) { showToast('품목을 선택하세요.', 'error'); return; }
+    if (qty < 1) { showToast('수량은 1 이상이어야 합니다.', 'error'); return; }
+
+    const item = items.find(i => i.id === itemId);
+    if (!item) { showToast('해당 품목을 찾을 수 없습니다.', 'error'); return; }
+
+    if (type === 'outbound' && qty > item.currentStock) {
+        showToast('재고 부족! 현재 재고: '+item.currentStock.toLocaleString()+item.unit, 'error', 4500);
+        return;
+    }
+
+    const newQty = item.currentStock + (type === 'inbound' ? qty : -qty);
+
+    const btn = document.getElementById('txSubmitBtn');
+    btn.textContent = '처리 중...';
+    btn.disabled = true;
+
+    const { ok: ok1 } = await sbFetch('/rest/v1/items?id=eq.'+itemId, {
+        method: 'PATCH',
+        body: JSON.stringify({ quantity: newQty })
+    });
+
+    if (!ok1) {
+        showToast('처리 실패: 다시 시도해주세요.', 'error');
+        btn.textContent = '처리 완료';
+        btn.disabled = false;
+        return;
+    }
+
+    await sbFetch('/rest/v1/history', {
+        method: 'POST',
+        body: JSON.stringify({
+            item_id: itemId, item_name: item.name,
+            type: type === 'inbound' ? 'in' : 'out',
+            quantity: qty, memo: note, handler
+        })
+    });
+
+    await loadItems();
+    await loadTransactions();
+    updateStats();
+    populateTxItemSelect();
+    onTxItemChange();
+
+    const updatedItem = items.find(i => i.id === itemId);
+    if (updatedItem && updatedItem.currentStock < updatedItem.minStock * 0.5) {
+        showToast('⚠ "'+item.name+'" 긴급 부족! 재고: '+updatedItem.currentStock+updatedItem.unit, 'error', 5000);
+    } else if (updatedItem && updatedItem.currentStock < updatedItem.minStock) {
+        showToast('"'+item.name+'" 재고가 적정 수준 미만입니다.', 'warning', 4000);
+    } else {
+        showToast((type==='inbound'?'입고':'출고')+' 처리 완료 — '+item.name+' '+qty.toLocaleString()+item.unit, 'success');
+    }
+
+    document.getElementById('txQty').value  = '';
+    document.getElementById('txNote').value = '';
+    btn.textContent = '처리 완료';
+    btn.disabled = false;
+}
+
+/* ─── 거래 내역 ─── */
+function populateHistoryItemFilter() {
+    const sel = document.getElementById('historyItemFilter');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">전체 품목</option>' + items.map(i => '<option value="'+i.id+'">'+esc(i.name)+'</option>').join('');
+    if (cur) sel.value = cur;
 }
 
 function renderHistory() {
-  const type = document.getElementById('hTypeFilter').value;
-  const itemId = document.getElementById('hItemFilter').value;
-  const filtered = txHistory.filter(t => {
-    if (type && t.type !== type) return false;
-    if (itemId && t.item_id !== itemId) return false;
-    return true;
-  });
-  const wrap = document.getElementById('histList');
-  if (!filtered.length) { wrap.innerHTML = '<div class="empty">거래 내역이 없습니다.</div>'; return; }
-  wrap.innerHTML = filtered.map(t => {
-    const isIn = t.type === '입고';
-    const dt = new Date(t.created_at);
-    const dtStr = dt.toLocaleDateString('ko-KR') + ' ' + dt.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'});
-    return `<div class="hist-item">
-      <div class="hist-left">
-        <div class="name">${esc(t.item_name||'')}</div>
-        <div class="meta">${t.handler ? esc(t.handler) + ' · ' : ''}${t.note ? esc(t.note) : ''}</div>
-      </div>
-      <div class="hist-right">
-        <div class="qty ${isIn?'in':'out'}">${isIn?'+':'-'}${t.quantity}</div>
-        <div class="time">${dtStr}</div>
-      </div>
-    </div>`;
-  }).join('');
+    const typeFilter = document.getElementById('historyTypeFilter').value;
+    const itemFilter = document.getElementById('historyItemFilter').value;
+    const filtered = transactions.filter(tx => {
+        const matchType = !typeFilter || tx.type === typeFilter;
+        const matchItem = !itemFilter || tx.itemId === itemFilter;
+        return matchType && matchItem;
+    });
+    const tbody = document.getElementById('historyTableBody');
+    const empty = document.getElementById('emptyHistory');
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+    tbody.innerHTML = filtered.map(tx => {
+        const isIn = tx.type === 'inbound';
+        return '<tr class="border-t border-gray-100 hover:bg-gray-50 transition-colors">'+
+            '<td class="px-3 py-3 text-xs text-gray-400 whitespace-nowrap">'+fmtDate(tx.date)+'</td>'+
+            '<td class="px-3 py-3 font-medium text-gray-900">'+esc(tx.itemName)+'</td>'+
+            '<td class="px-3 py-3 text-center"><span class="inline-block px-2 py-0.5 rounded text-xs font-semibold '+(isIn?'bg-emerald-100 text-emerald-700':'bg-orange-100 text-orange-700')+'">'+(isIn?'↑ 입고':'↓ 출고')+'</span></td>'+
+            '<td class="px-3 py-3 text-right font-semibold '+(isIn?'text-emerald-600':'text-orange-600')+'">'+(isIn?'+':'-')+tx.quantity.toLocaleString()+'</td>'+
+            '<td class="px-3 py-3 text-right text-gray-700 font-medium">'+tx.stockAfter.toLocaleString()+'</td>'+
+            '<td class="px-3 py-3 text-sm text-gray-500">'+esc(tx.handler)+'</td>'+
+            '<td class="px-3 py-3 text-sm text-gray-400">'+esc(tx.note)+'</td>'+
+            '</tr>';
+    }).join('');
 }
 
-/* ─── EDIT MODAL ─── */
-function openEdit(id) {
-  const i = items.find(x => x.id === id);
-  if (!i) return;
-  document.getElementById('editId').value = i.id;
-  document.getElementById('editName').value = i.name || '';
-  document.getElementById('editCat').value = i.category || '';
-  document.getElementById('editUnit').value = i.unit || '';
-  document.getElementById('editStock').value = i.quantity || 0;
-  document.getElementById('editMinStock').value = i.min_qty || 0;
-  document.getElementById('editNote').value = i.note || '';
-  openModal('editModal');
+/* ─── 삭제 모달 ─── */
+function openDeleteModal(itemId) {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+    pendingDeleteId = itemId;
+    document.getElementById('deleteModalMsg').textContent =
+        '"'+item.name+'"을(를) 삭제하시겠습니까? 관련 거래 내역 '+
+        transactions.filter(t => t.itemId === itemId).length+'건도 함께 삭제됩니다.';
+    document.getElementById('deleteModal').classList.remove('hidden');
 }
 
-async function doEdit() {
-  const id = document.getElementById('editId').value;
-  const name = document.getElementById('editName').value.trim();
-  const category = document.getElementById('editCat').value;
-  const unit = document.getElementById('editUnit').value;
-  const quantity = parseInt(document.getElementById('editStock').value) || 0;
-  const min_qty = parseInt(document.getElementById('editMinStock').value) || 0;
-  const note = document.getElementById('editNote').value.trim();
-  if (!name) { toast('품목명을 입력해주세요.', 'warn'); return; }
-  const { error } = await sb.from('items').update({ name, category, unit, quantity, min_qty, note }).eq('id', id);
-  if (error) { toast('수정 실패: ' + error.message, 'err'); return; }
-  closeModal('editModal');
-  toast('✅ 수정 완료!');
-  await loadAll();
+function closeDeleteModal() {
+    pendingDeleteId = null;
+    document.getElementById('deleteModal').classList.add('hidden');
 }
 
-/* ─── DELETE MODAL ─── */
-function openDel(id) {
-  const i = items.find(x => x.id === id);
-  if (!i) return;
-  document.getElementById('delId').value = id;
-  document.getElementById('delItemName').textContent = i.name;
-  openModal('delModal');
+function onModalBackdropClick(e) {
+    if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
 }
 
-async function doDelete() {
-  const id = document.getElementById('delId').value;
-  await sb.from('history').delete().eq('item_id', id);
-  const { error } = await sb.from('items').delete().eq('id', id);
-  if (error) { toast('삭제 실패: ' + error.message, 'err'); return; }
-  closeModal('delModal');
-  toast('🗑️ 삭제 완료!');
-  await loadAll();
+async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    const item = items.find(i => i.id === pendingDeleteId);
+    await sbFetch('/rest/v1/history?item_id=eq.'+pendingDeleteId, { method: 'DELETE' });
+    await sbFetch('/rest/v1/items?id=eq.'+pendingDeleteId, { method: 'DELETE' });
+    await loadItems();
+    await loadTransactions();
+    updateStats();
+    renderInventoryTable();
+    closeDeleteModal();
+    showToast('"'+(item?.name)+'" 삭제 완료', 'info');
 }
 
-/* ─── MODAL UTILS ─── */
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-bg').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
-});
-
-/* ─── TOAST ─── */
-function toast(msg, type) {
-  const d = document.createElement('div');
-  d.className = 'toast-msg';
-  if (type === 'warn') d.style.background = '#f59e0b';
-  if (type === 'err') d.style.background = '#ef4444';
-  d.textContent = msg;
-  document.getElementById('toast').appendChild(d);
-  setTimeout(() => d.classList.add('show'), 10);
-  setTimeout(() => { d.classList.remove('show'); setTimeout(() => d.remove(), 300); }, 2500);
+/* ─── 토스트 ─── */
+function showToast(msg, type='info', duration=3000) {
+    const palette = {
+        success: 'bg-emerald-600 text-white',
+        error:   'bg-red-500 text-white',
+        warning: 'bg-amber-500 text-white',
+        info:    'bg-gray-700 text-white'
+    };
+    const toast = document.createElement('div');
+    toast.className = ['toast-enter pointer-events-auto flex items-start gap-3',
+        'px-4 py-3 rounded-xl text-sm shadow-lg max-w-xs w-full',
+        palette[type] || palette.info].join(' ');
+    toast.innerHTML = '<span class="flex-1 leading-snug">'+esc(msg)+'</span>'+
+        '<button onclick="this.closest('.pointer-events-auto').remove()" class="shrink-0 opacity-70 hover:opacity-100 text-lg leading-none mt-px">&times;</button>';
+    document.getElementById('toastContainer').appendChild(toast);
+    requestAnimationFrame(() => { toast.classList.replace('toast-enter','toast-show'); });
+    setTimeout(() => {
+        toast.classList.replace('toast-show','toast-leave');
+        setTimeout(() => toast.remove(), 350);
+    }, duration);
 }
-
-/* ─── UTIL ─── */
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/* ─── ENTER KEY LOGIN ─── */
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('loginWrap').style.display !== 'none') doLogin();
-});
 </script>
 </body>
 </html>
