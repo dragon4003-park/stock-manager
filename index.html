@@ -2,673 +2,416 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>소모품 관리</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2563eb" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="소모품관리" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <script src="https://cdn.tailwindcss.com/3.4.1"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
-    .tab-inactive { border-bottom: 2px solid transparent; color: #6b7280; }
-    .nav-active { color: #2563eb; }
-    .nav-inactive { color: #9ca3af; }
-    input, select, textarea { font-size: 16px !important; }
-    .badge-low { background: #fef2f2; color: #dc2626; }
-    .badge-ok  { background: #f0fdf4; color: #16a34a; }
-    .fade-in { animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #333; }
+
+    /* AUTH */
+    #authWrap { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 16px; }
+    .auth-box { background: #fff; border-radius: 12px; padding: 32px 24px; width: 100%; max-width: 380px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    .auth-box h1 { text-align: center; font-size: 22px; margin-bottom: 24px; color: #1a73e8; }
+    .tab-btns { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+    .tab-btns button { flex: 1; padding: 10px; background: none; border: none; font-size: 15px; cursor: pointer; color: #888; }
+    .tab-btns button.active { color: #1a73e8; border-bottom: 2px solid #1a73e8; margin-bottom: -2px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; }
+    .form-group input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }
+    .btn-primary { width: 100%; padding: 12px; background: #1a73e8; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; }
+    .btn-primary:hover { background: #1558b0; }
+    .msg { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 13px; display: none; }
+    .msg.error { background: #fde8e8; color: #c0392b; display: block; }
+    .msg.success { background: #e8f5e9; color: #27ae60; display: block; }
+
+    /* APP */
+    #appWrap { display: none; }
+    .header { background: #1a73e8; color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .header h2 { font-size: 18px; }
+    .header button { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .nav-tabs { display: flex; background: #fff; border-bottom: 1px solid #ddd; }
+    .nav-tabs button { flex: 1; padding: 12px 4px; background: none; border: none; font-size: 13px; cursor: pointer; color: #888; border-bottom: 3px solid transparent; }
+    .nav-tabs button.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+    .page { display: none; padding: 16px; }
+    .page.active { display: block; }
+    .card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .card h3 { font-size: 15px; margin-bottom: 12px; color: #333; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-row input, .form-row select { padding: 9px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 100%; }
+    .btn-add { background: #1a73e8; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: 4px; }
+    .item-list { list-style: none; }
+    .item-list li { background: #fff; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); display: flex; justify-content: space-between; align-items: center; }
+    .item-info { flex: 1; }
+    .item-name { font-size: 15px; font-weight: 600; }
+    .item-sub { font-size: 12px; color: #888; margin-top: 2px; }
+    .stock-badge { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+    .stock-ok { background: #e8f5e9; color: #2e7d32; }
+    .stock-low { background: #fff3e0; color: #e65100; }
+    .stock-out { background: #fde8e8; color: #c0392b; }
+    .item-actions button { margin-left: 6px; padding: 5px 10px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .btn-use { background: #ff7043; color: #fff; }
+    .btn-restock { background: #43a047; color: #fff; }
+    .btn-del { background: #eee; color: #666; }
+    .empty { text-align: center; color: #aaa; padding: 40px 0; font-size: 14px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .summary-card { background: #fff; border-radius: 8px; padding: 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+    .summary-card .num { font-size: 26px; font-weight: 700; color: #1a73e8; }
+    .summary-card .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+    .tx-list { list-style: none; }
+    .tx-list li { padding: 10px 12px; background: #fff; border-radius: 8px; margin-bottom: 6px; font-size: 13px; display: flex; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .tx-type { font-weight: 600; }
+    .tx-use { color: #e53935; }
+    .tx-in { color: #43a047; }
+    .alert-list { list-style: none; }
+    .alert-list li { padding: 12px 14px; background: #fff3e0; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #ff9800; font-size: 13px; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body>
 
-<!-- ===================== AUTH SCREEN ===================== -->
-<div id="authScreen" class="min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6">
-    <div class="text-center mb-6">
-      <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
-        <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
-        </svg>
+<!-- 인증 화면 -->
+<div id="authWrap">
+  <div class="auth-box">
+    <h1>소모품 관리</h1>
+    <div class="tab-btns">
+      <button class="active" onclick="showAuthTab('login')">로그인</button>
+      <button onclick="showAuthTab('signup')">회원가입</button>
+    </div>
+    <!-- 로그인 -->
+    <div id="tabLogin" class="tab-content active">
+      <div class="form-group">
+        <label>이메일</label>
+        <input type="email" id="loginEmail" placeholder="이메일 입력" />
       </div>
-      <h1 class="text-xl font-bold text-gray-900">소모품 관리</h1>
-      <p class="text-sm text-gray-500 mt-1">팀 공유 재고 관리 시스템</p>
-    </div>
-
-    <!-- 탭 -->
-    <div class="flex mb-5 border-b">
-      <button id="tabLoginBtn" onclick="showTab('login')" class="flex-1 py-2 text-sm tab-active">로그인</button>
-      <button id="tabSignupBtn" onclick="showTab('signup')" class="flex-1 py-2 text-sm tab-inactive">회원가입</button>
-    </div>
-
-    <!-- 로그인 폼 -->
-    <div id="loginForm">
-      <div class="space-y-3">
-        <input id="loginEmail" type="email" placeholder="이메일" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-        <input id="loginPassword" type="password" placeholder="비밀번호" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-        <button onclick="doLogin()" class="w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors">로그인</button>
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" id="loginPw" placeholder="비밀번호 입력" />
       </div>
+      <button class="btn-primary" onclick="doLogin()">로그인</button>
+      <div id="loginMsg" class="msg"></div>
     </div>
-
-    <!-- 회원가입 폼 -->
-    <div id="signupForm" class="hidden">
-      <div class="space-y-3">
-        <input id="signupName" type="text" placeholder="이름" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-        <input id="signupEmail" type="email" placeholder="이메일" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-        <input id="signupPassword" type="password" placeholder="비밀번호 (6자 이상)" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-        <button onclick="doSignup()" class="w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors">회원가입</button>
+    <!-- 회원가입 -->
+    <div id="tabSignup" class="tab-content">
+      <div class="form-group">
+        <label>이름</label>
+        <input type="text" id="signupName" placeholder="이름 입력" />
       </div>
+      <div class="form-group">
+        <label>이메일</label>
+        <input type="email" id="signupEmail" placeholder="이메일 입력" />
+      </div>
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" id="signupPw" placeholder="비밀번호 (6자 이상)" />
+      </div>
+      <button class="btn-primary" onclick="doSignup()">회원가입</button>
+      <div id="signupMsg" class="msg"></div>
     </div>
-
-    <div id="authMsg" class="mt-3 text-sm text-center text-red-500 hidden"></div>
   </div>
 </div>
 
-<!-- ===================== MAIN APP ===================== -->
-<div id="mainApp" class="hidden max-w-lg mx-auto">
+<!-- 메인 앱 -->
+<div id="appWrap">
+  <div class="header">
+    <h2>소모품 관리</h2>
+    <button onclick="doLogout()">로그아웃</button>
+  </div>
+  <div class="nav-tabs">
+    <button class="active" onclick="showPage('dashboard')">현황</button>
+    <button onclick="showPage('items')">품목관리</button>
+    <button onclick="showPage('add')">품목추가</button>
+    <button onclick="showPage('history')">이력</button>
+    <button onclick="showPage('alerts')">알림</button>
+  </div>
 
-  <!-- 상단 헤더 -->
-  <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
-    <div class="flex items-center justify-between px-4 py-3">
-      <h1 class="text-base font-bold text-gray-900">소모품 관리</h1>
-      <div class="flex items-center gap-2">
-        <button onclick="showAlerts()" class="relative p-2 rounded-full hover:bg-gray-100">
-          <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-          </svg>
-          <span id="alertBadge" class="hidden absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
-        <button onclick="doLogout()" class="text-xs text-gray-500 px-2 py-1 rounded-lg hover:bg-gray-100">로그아웃</button>
+  <!-- 현황 -->
+  <div id="pageDashboard" class="page active">
+    <div class="summary-grid">
+      <div class="summary-card"><div class="num" id="totalCount">0</div><div class="lbl">전체 품목</div></div>
+      <div class="summary-card"><div class="num" id="lowCount" style="color:#e65100">0</div><div class="lbl">부족 품목</div></div>
+      <div class="summary-card"><div class="num" id="outCount" style="color:#c0392b">0</div><div class="lbl">소진 품목</div></div>
+    </div>
+    <div class="card">
+      <h3>최근 이력</h3>
+      <ul class="tx-list" id="recentTx"><li style="color:#aaa; font-size:13px; text-align:center; padding:20px">이력 없음</li></ul>
+    </div>
+  </div>
+
+  <!-- 품목 목록 -->
+  <div id="pageItems" class="page">
+    <ul class="item-list" id="itemList"><li class="empty">등록된 품목이 없습니다</li></ul>
+  </div>
+
+  <!-- 품목 추가 -->
+  <div id="pageAdd" class="page">
+    <div class="card">
+      <h3>새 품목 추가</h3>
+      <div class="form-row full">
+        <input type="text" id="newName" placeholder="품목명 *" />
       </div>
-    </div>
-    <p id="userInfo" class="text-xs text-gray-400 px-4 pb-2"></p>
-  </header>
-
-  <!-- 메인 콘텐츠 -->
-  <main class="pb-24 px-4 pt-4">
-
-    <!-- 재고 현황 탭 -->
-    <div id="pageStock" class="fade-in">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-gray-700">재고 현황</h2>
-        <button onclick="showAddItem()" class="flex items-center gap-1 bg-blue-600 text-white text-xs px-3 py-2 rounded-xl hover:bg-blue-700">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-          품목 추가
-        </button>
+      <div class="form-row">
+        <input type="text" id="newCategory" placeholder="카테고리" />
+        <input type="text" id="newUnit" placeholder="단위 (개, 박스 등)" />
       </div>
-      <input id="searchInput" type="text" placeholder="품목 검색..." oninput="renderItems()" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm mb-3 outline-none focus:border-blue-400" />
-      <div id="itemList" class="space-y-2"></div>
-    </div>
-
-    <!-- 입출고 탭 -->
-    <div id="pageTransaction" class="hidden fade-in">
-      <h2 class="text-sm font-semibold text-gray-700 mb-3">입출고 처리</h2>
-      <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
-        <div>
-          <label class="text-xs text-gray-500 mb-1 block">품목 선택</label>
-          <select id="txItem" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400">
-            <option value="">-- 선택하세요 --</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs text-gray-500 mb-1 block">구분</label>
-          <div class="flex gap-2">
-            <button id="btnInbound" onclick="setTxType('in')" class="flex-1 py-2.5 text-sm rounded-xl border-2 border-blue-500 bg-blue-50 text-blue-700 font-semibold">입고</button>
-            <button id="btnOutbound" onclick="setTxType('out')" class="flex-1 py-2.5 text-sm rounded-xl border-2 border-gray-200 text-gray-500">출고</button>
-          </div>
-        </div>
-        <div>
-          <label class="text-xs text-gray-500 mb-1 block">수량</label>
-          <input id="txQty" type="number" min="1" placeholder="수량 입력" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
-        </div>
-        <div>
-          <label class="text-xs text-gray-500 mb-1 block">메모 (선택)</label>
-          <input id="txNote" type="text" placeholder="메모를 입력하세요" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
-        </div>
-        <button onclick="doTransaction()" class="w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-blue-700">처리하기</button>
+      <div class="form-row">
+        <input type="number" id="newStock" placeholder="현재 재고" min="0" />
+        <input type="number" id="newMinStock" placeholder="최소 재고" min="0" />
       </div>
-
-      <h2 class="text-sm font-semibold text-gray-700 mt-5 mb-3">최근 거래 내역</h2>
-      <div id="txList" class="space-y-2"></div>
-    </div>
-
-    <!-- 알림 탭 -->
-    <div id="pageAlerts" class="hidden fade-in">
-      <h2 class="text-sm font-semibold text-gray-700 mb-3">재고 알림</h2>
-      <div id="alertList" class="space-y-2"></div>
-    </div>
-
-    <!-- 설정 탭 -->
-    <div id="pageSettings" class="hidden fade-in">
-      <h2 class="text-sm font-semibold text-gray-700 mb-3">설정</h2>
-      <div class="bg-white rounded-2xl border border-gray-200 divide-y">
-        <div class="p-4">
-          <p class="text-xs text-gray-500 mb-1">로그인 계정</p>
-          <p id="settingsEmail" class="text-sm font-medium text-gray-800"></p>
-        </div>
-        <div class="p-4">
-          <p class="text-xs text-gray-500 mb-1">버전</p>
-          <p class="text-sm text-gray-800">1.0.0</p>
-        </div>
-        <div class="p-4">
-          <button onclick="doLogout()" class="text-sm text-red-500 font-medium">로그아웃</button>
-        </div>
+      <div class="form-row full">
+        <input type="text" id="newLocation" placeholder="보관 위치" />
       </div>
+      <button class="btn-add" onclick="addItem()">품목 추가</button>
+      <div id="addMsg" class="msg"></div>
     </div>
+  </div>
 
-  </main>
+  <!-- 이력 -->
+  <div id="pageHistory" class="page">
+    <ul class="tx-list" id="historyList"><li style="color:#aaa; font-size:13px; text-align:center; padding:20px">이력 없음</li></ul>
+  </div>
 
-  <!-- 하단 네비게이션 -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30">
-    <div class="max-w-lg mx-auto flex">
-      <button onclick="showPage('stock')" id="nav-stock" class="flex-1 flex flex-col items-center py-2.5 nav-active">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg>
-        <span class="text-xs mt-0.5">재고</span>
-      </button>
-      <button onclick="showPage('transaction')" id="nav-transaction" class="flex-1 flex flex-col items-center py-2.5 nav-inactive">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-        <span class="text-xs mt-0.5">입출고</span>
-      </button>
-      <button onclick="showPage('alerts')" id="nav-alerts" class="flex-1 flex flex-col items-center py-2.5 nav-inactive">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-        <span class="text-xs mt-0.5">알림</span>
-      </button>
-      <button onclick="showPage('settings')" id="nav-settings" class="flex-1 flex flex-col items-center py-2.5 nav-inactive">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        <span class="text-xs mt-0.5">설정</span>
-      </button>
-    </div>
-  </nav>
-</div>
-
-<!-- ===================== 품목 추가 모달 ===================== -->
-<div id="modalAddItem" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
-  <div class="bg-white w-full max-w-lg rounded-t-3xl p-6 space-y-3 fade-in">
-    <div class="flex justify-between items-center mb-1">
-      <h3 class="text-base font-bold text-gray-900">품목 추가</h3>
-      <button onclick="hideModal('modalAddItem')" class="text-gray-400 hover:text-gray-600">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <input id="newItemName" type="text" placeholder="품목명 *" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400" />
-    <input id="newItemCategory" type="text" placeholder="카테고리 (예: 사무용품)" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400" />
-    <input id="newItemUnit" type="text" placeholder="단위 (예: 개, 박스, 롤)" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400" />
-    <div class="flex gap-2">
-      <div class="flex-1">
-        <label class="text-xs text-gray-500 mb-1 block">초기 수량</label>
-        <input id="newItemQty" type="number" min="0" placeholder="0" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400" />
-      </div>
-      <div class="flex-1">
-        <label class="text-xs text-gray-500 mb-1 block">최소 재고 (알림 기준)</label>
-        <input id="newItemMin" type="number" min="0" placeholder="0" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400" />
-      </div>
-    </div>
-    <button onclick="addItem()" class="w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-blue-700">추가하기</button>
+  <!-- 알림 -->
+  <div id="pageAlerts" class="page">
+    <ul class="alert-list" id="alertList"><li style="color:#aaa; font-size:13px; text-align:center; padding:20px; background:#f9f9f9; border-left:none;">알림 없음</li></ul>
   </div>
 </div>
 
-<!-- ===================== 입출고 모달 (재고카드에서 직접) ===================== -->
-<div id="modalQuickTx" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
-  <div class="bg-white w-full max-w-lg rounded-t-3xl p-6 fade-in">
-    <div class="flex justify-between items-center mb-4">
-      <h3 id="quickTxTitle" class="text-base font-bold text-gray-900">입출고</h3>
-      <button onclick="hideModal('modalQuickTx')" class="text-gray-400 hover:text-gray-600">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="flex gap-2 mb-4">
-      <button id="quickBtnIn" onclick="setQuickType('in')" class="flex-1 py-2.5 text-sm rounded-xl border-2 border-blue-500 bg-blue-50 text-blue-700 font-semibold">입고</button>
-      <button id="quickBtnOut" onclick="setQuickType('out')" class="flex-1 py-2.5 text-sm rounded-xl border-2 border-gray-200 text-gray-500">출고</button>
-    </div>
-    <input id="quickQty" type="number" min="1" placeholder="수량 입력" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-blue-400" />
-    <input id="quickNote" type="text" placeholder="메모 (선택)" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-blue-400" />
-    <button onclick="doQuickTx()" class="w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-blue-700">처리하기</button>
-  </div>
-</div>
-
-<!-- 토스트 알림 -->
-<div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-2xl shadow-lg max-w-xs text-center"></div>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-// ===================== SUPABASE 설정 =====================
-// ⚠️ 아래 두 줄을 실제 값으로 교체하세요!
-const SUPABASE_URL      = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqdGZyYndha2NqcHFjcnp0cGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NDYxNTUsImV4cCI6MjA5NTUyMjE1NX0.8d8bkHFYFV8BrR4kR-OHg3NiOTqBiXDPdeTM5q513RA';
+  var SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqdGZyYndha2NqcHFjcnp0cGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NDYxNTUsImV4cCI6MjA5NTUyMjE1NX0.8d8bkHFYFV8BrR4kR-OHg3NiOTqBiXDPdeTM5q513RA';
 
-let _supabase = null;
-let currentUser = null;
-let stockItems = [];
-let txType = 'in';
-let quickTxItemId = null;
-let quickTxType = 'in';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  var currentUser = null;
+  var itemData = [];
+  var txData = [];
 
-// Supabase 초기화
-function initSupabase() {
-  try {
-    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    return true;
-  } catch(e) {
-    showToast('Supabase 연결 실패: ' + e.message);
-    return false;
+  /* ===================== 인증 ===================== */
+  function showAuthTab(tab) {
+    document.getElementById('tabLogin').classList.remove('active');
+    document.getElementById('tabSignup').classList.remove('active');
+    document.querySelectorAll('.tab-btns button').forEach(function(b) { b.classList.remove('active'); });
+    if (tab === 'login') {
+      document.getElementById('tabLogin').classList.add('active');
+      document.querySelectorAll('.tab-btns button')[0].classList.add('active');
+    } else {
+      document.getElementById('tabSignup').classList.add('active');
+      document.querySelectorAll('.tab-btns button')[1].classList.add('active');
+    }
   }
-}
 
-// ===================== 인증 =====================
-function showTab(tab) {
-  const loginForm  = document.getElementById('loginForm');
-  const signupForm = document.getElementById('signupForm');
-  const tabLogin   = document.getElementById('tabLoginBtn');
-  const tabSignup  = document.getElementById('tabSignupBtn');
-
-  if (tab === 'login') {
-    loginForm.classList.remove('hidden');
-    signupForm.classList.add('hidden');
-    tabLogin.className  = 'flex-1 py-2 text-sm tab-active';
-    tabSignup.className = 'flex-1 py-2 text-sm tab-inactive';
-  } else {
-    loginForm.classList.add('hidden');
-    signupForm.classList.remove('hidden');
-    tabLogin.className  = 'flex-1 py-2 text-sm tab-inactive';
-    tabSignup.className = 'flex-1 py-2 text-sm tab-active';
+  function showMsg(id, text, type) {
+    var el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'msg ' + type;
   }
-  document.getElementById('authMsg').classList.add('hidden');
-}
 
-function showAuthMsg(msg, isError) {
-  const el = document.getElementById('authMsg');
-  el.textContent = msg;
-  el.className = 'mt-3 text-sm text-center ' + (isError ? 'text-red-500' : 'text-green-600');
-  el.classList.remove('hidden');
-}
-
-async function doLogin() {
-  if (!_supabase) { showAuthMsg('Supabase가 연결되지 않았습니다. URL과 키를 확인하세요.', true); return; }
-  const email = document.getElementById('loginEmail').value.trim();
-  const pass  = document.getElementById('loginPassword').value;
-  if (!email || !pass) { showAuthMsg('이메일과 비밀번호를 입력하세요.', true); return; }
-  showAuthMsg('로그인 중...', false);
-  const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pass });
-  if (error) { showAuthMsg(error.message, true); return; }
-  currentUser = data.user;
-  enterApp();
-}
-
-async function doSignup() {
-  if (!_supabase) { showAuthMsg('Supabase가 연결되지 않았습니다. URL과 키를 확인하세요.', true); return; }
-  const name  = document.getElementById('signupName').value.trim();
-  const email = document.getElementById('signupEmail').value.trim();
-  const pass  = document.getElementById('signupPassword').value;
-  if (!name || !email || !pass) { showAuthMsg('모든 항목을 입력하세요.', true); return; }
-  if (pass.length < 6) { showAuthMsg('비밀번호는 6자 이상이어야 합니다.', true); return; }
-  showAuthMsg('가입 중...', false);
-  const { data, error } = await _supabase.auth.signUp({
-    email, password: pass,
-    options: { data: { name } }
-  });
-  if (error) { showAuthMsg(error.message, true); return; }
-  if (data.user && !data.user.confirmed_at) {
-    showAuthMsg('가입 완료! 이메일 인증 없이 로그인하세요.', false);
-    document.getElementById('loginEmail').value    = email;
-    document.getElementById('loginPassword').value = pass;
-    showTab('login');
-  } else {
-    currentUser = data.user;
-    enterApp();
+  function doSignup() {
+    var name = document.getElementById('signupName').value.trim();
+    var email = document.getElementById('signupEmail').value.trim();
+    var pw = document.getElementById('signupPw').value;
+    if (!email || !pw) { showMsg('signupMsg', '이메일과 비밀번호를 입력해주세요', 'error'); return; }
+    if (pw.length < 6) { showMsg('signupMsg', '비밀번호는 6자 이상이어야 합니다', 'error'); return; }
+    showMsg('signupMsg', '처리 중...', 'success');
+    sb.auth.signUp({ email: email, password: pw, options: { data: { name: name } } }).then(function(res) {
+      if (res.error) {
+        showMsg('signupMsg', res.error.message, 'error');
+      } else {
+        showMsg('signupMsg', '가입 완료! 로그인해주세요', 'success');
+        setTimeout(function() { showAuthTab('login'); }, 1500);
+      }
+    });
   }
-}
 
-async function doLogout() {
-  if (_supabase) await _supabase.auth.signOut();
-  currentUser = null;
-  stockItems = [];
-  document.getElementById('mainApp').classList.add('hidden');
-  document.getElementById('authScreen').classList.remove('hidden');
-  showTab('login');
-}
-
-function enterApp() {
-  document.getElementById('authScreen').classList.add('hidden');
-  document.getElementById('mainApp').classList.remove('hidden');
-  const email = currentUser.email || '';
-  document.getElementById('userInfo').textContent     = email;
-  document.getElementById('settingsEmail').textContent = email;
-  loadAll();
-  subscribeRealtime();
-}
-
-// ===================== 데이터 로드 =====================
-async function loadAll() {
-  await loadItems();
-  await loadTx();
-  await loadAlerts();
-}
-
-async function loadItems() {
-  if (!_supabase) return;
-  const { data, error } = await _supabase
-    .from('stock_items')
-    .select('*')
-    .order('name');
-  if (error) { showToast('재고 불러오기 실패: ' + error.message); return; }
-  stockItems = data || [];
-  renderItems();
-  populateTxSelect();
-}
-
-async function loadTx() {
-  if (!_supabase) return;
-  const { data, error } = await _supabase
-    .from('stock_logs')
-    .select('*, stock_items(name)')
-    .order('created_at', { ascending: false })
-    .limit(50);
-  if (error) return;
-  renderTxList(data || []);
-}
-
-async function loadAlerts() {
-  if (!_supabase) return;
-  const alerts = stockItems.filter(function(i) {
-    return i.quantity <= i.min_quantity && i.min_quantity > 0;
-  });
-  renderAlertList(alerts);
-  const badge = document.getElementById('alertBadge');
-  if (alerts.length > 0) {
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
+  function doLogin() {
+    var email = document.getElementById('loginEmail').value.trim();
+    var pw = document.getElementById('loginPw').value;
+    if (!email || !pw) { showMsg('loginMsg', '이메일과 비밀번호를 입력해주세요', 'error'); return; }
+    showMsg('loginMsg', '로그인 중...', 'success');
+    sb.auth.signInWithPassword({ email: email, password: pw }).then(function(res) {
+      if (res.error) {
+        showMsg('loginMsg', res.error.message, 'error');
+      } else {
+        currentUser = res.data.user;
+        openApp();
+      }
+    });
   }
-}
 
-// ===================== 렌더링 =====================
-function renderItems() {
-  const keyword = (document.getElementById('searchInput').value || '').toLowerCase();
-  const filtered = stockItems.filter(function(i) {
-    return i.name.toLowerCase().includes(keyword);
-  });
-  const container = document.getElementById('itemList');
-  if (filtered.length === 0) {
-    container.innerHTML = '<p class="text-center text-sm text-gray-400 py-10">등록된 품목이 없습니다</p>';
-    return;
+  function doLogout() {
+    sb.auth.signOut().then(function() {
+      currentUser = null;
+      document.getElementById('appWrap').style.display = 'none';
+      document.getElementById('authWrap').style.display = 'flex';
+    });
   }
-  container.innerHTML = filtered.map(function(item) {
-    const isLow = item.quantity <= item.min_quantity && item.min_quantity > 0;
-    const badgeClass = isLow ? 'badge-low' : 'badge-ok';
-    const badgeText  = isLow ? '부족' : '정상';
-    return (
-      '<div class="bg-white rounded-2xl border border-gray-200 p-4 flex items-center justify-between">' +
-        '<div>' +
-          '<div class="flex items-center gap-2">' +
-            '<span class="text-sm font-semibold text-gray-900">' + escHtml(item.name) + '</span>' +
-            '<span class="text-xs px-2 py-0.5 rounded-full ' + badgeClass + '">' + badgeText + '</span>' +
-          '</div>' +
-          '<p class="text-xs text-gray-400 mt-0.5">' +
-            (item.category ? escHtml(item.category) + ' · ' : '') +
-            '최소 ' + item.min_quantity + (item.unit || '') +
-          '</p>' +
-        '</div>' +
-        '<div class="flex items-center gap-3">' +
-          '<div class="text-right">' +
-            '<p class="text-lg font-bold ' + (isLow ? 'text-red-500' : 'text-blue-600') + '">' + item.quantity + '</p>' +
-            '<p class="text-xs text-gray-400">' + (item.unit || '개') + '</p>' +
-          '</div>' +
-          '<button onclick="openQuickTx('' + item.id + '', '' + escHtml(item.name) + '')" class="p-2 bg-gray-100 rounded-xl hover:bg-gray-200">' +
-            '<svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>' +
-          '</button>' +
-        '</div>' +
-      '</div>'
-    );
-  }).join('');
-}
 
-function renderTxList(list) {
-  const container = document.getElementById('txList');
-  if (list.length === 0) {
-    container.innerHTML = '<p class="text-center text-sm text-gray-400 py-8">거래 내역이 없습니다</p>';
-    return;
-  }
-  container.innerHTML = list.map(function(tx) {
-    const isIn = tx.type === 'in';
-    const colorClass = isIn ? 'text-green-600' : 'text-red-500';
-    const sign = isIn ? '+' : '-';
-    const dt = new Date(tx.created_at);
-    const dateStr = (dt.getMonth()+1) + '/' + dt.getDate() + ' ' + dt.getHours() + ':' + String(dt.getMinutes()).padStart(2,'0');
-    const itemName = tx.stock_items ? tx.stock_items.name : '';
-    return (
-      '<div class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex justify-between items-center">' +
-        '<div>' +
-          '<p class="text-sm font-medium text-gray-900">' + escHtml(itemName) + '</p>' +
-          '<p class="text-xs text-gray-400">' + dateStr + (tx.note ? ' · ' + escHtml(tx.note) : '') + '</p>' +
-        '</div>' +
-        '<p class="text-base font-bold ' + colorClass + '">' + sign + tx.quantity + (tx.unit || '') + '</p>' +
-      '</div>'
-    );
-  }).join('');
-}
-
-function renderAlertList(alerts) {
-  const container = document.getElementById('alertList');
-  if (alerts.length === 0) {
-    container.innerHTML = '<div class="bg-white rounded-2xl border border-gray-200 p-8 text-center"><p class="text-sm text-gray-400">부족한 재고가 없습니다</p></div>';
-    return;
-  }
-  container.innerHTML = alerts.map(function(item) {
-    return (
-      '<div class="bg-red-50 border border-red-200 rounded-2xl p-4 flex justify-between items-center">' +
-        '<div>' +
-          '<p class="text-sm font-semibold text-red-700">' + escHtml(item.name) + '</p>' +
-          '<p class="text-xs text-red-400 mt-0.5">현재 ' + item.quantity + ' / 최소 ' + item.min_quantity + (item.unit || '') + '</p>' +
-        '</div>' +
-        '<span class="text-xs font-semibold bg-red-100 text-red-600 px-3 py-1 rounded-full">보충 필요</span>' +
-      '</div>'
-    );
-  }).join('');
-}
-
-function populateTxSelect() {
-  const sel = document.getElementById('txItem');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">-- 선택하세요 --</option>';
-  stockItems.forEach(function(item) {
-    const opt = document.createElement('option');
-    opt.value = item.id;
-    opt.textContent = item.name + ' (' + item.quantity + (item.unit || '개') + ')';
-    sel.appendChild(opt);
-  });
-  if (cur) sel.value = cur;
-}
-
-// ===================== 품목 추가 =====================
-async function addItem() {
-  const name     = document.getElementById('newItemName').value.trim();
-  const category = document.getElementById('newItemCategory').value.trim();
-  const unit     = document.getElementById('newItemUnit').value.trim();
-  const qty      = parseInt(document.getElementById('newItemQty').value) || 0;
-  const minQty   = parseInt(document.getElementById('newItemMin').value) || 0;
-  if (!name) { showToast('품목명을 입력하세요'); return; }
-  const { error } = await _supabase.from('stock_items').insert({
-    name, category, unit,
-    quantity: qty,
-    min_quantity: minQty
-  });
-  if (error) { showToast('추가 실패: ' + error.message); return; }
-  showToast(name + ' 추가 완료!');
-  hideModal('modalAddItem');
-  document.getElementById('newItemName').value     = '';
-  document.getElementById('newItemCategory').value = '';
-  document.getElementById('newItemUnit').value     = '';
-  document.getElementById('newItemQty').value      = '';
-  document.getElementById('newItemMin').value      = '';
-  await loadItems();
-}
-
-// ===================== 입출고 =====================
-function setTxType(type) {
-  txType = type;
-  const btnIn  = document.getElementById('btnInbound');
-  const btnOut = document.getElementById('btnOutbound');
-  if (type === 'in') {
-    btnIn.className  = 'flex-1 py-2.5 text-sm rounded-xl border-2 border-blue-500 bg-blue-50 text-blue-700 font-semibold';
-    btnOut.className = 'flex-1 py-2.5 text-sm rounded-xl border-2 border-gray-200 text-gray-500';
-  } else {
-    btnOut.className = 'flex-1 py-2.5 text-sm rounded-xl border-2 border-red-500 bg-red-50 text-red-700 font-semibold';
-    btnIn.className  = 'flex-1 py-2.5 text-sm rounded-xl border-2 border-gray-200 text-gray-500';
-  }
-}
-
-async function doTransaction() {
-  const itemId = document.getElementById('txItem').value;
-  const qty    = parseInt(document.getElementById('txQty').value);
-  const note   = document.getElementById('txNote').value.trim();
-  if (!itemId) { showToast('품목을 선택하세요'); return; }
-  if (!qty || qty < 1) { showToast('수량을 1 이상 입력하세요'); return; }
-  await processStock(itemId, txType, qty, note);
-  document.getElementById('txQty').value  = '';
-  document.getElementById('txNote').value = '';
-}
-
-// 빠른 입출고 (재고 카드)
-function openQuickTx(itemId, itemName) {
-  quickTxItemId = itemId;
-  quickTxType = 'in';
-  document.getElementById('quickTxTitle').textContent = itemName + ' 입출고';
-  document.getElementById('quickQty').value  = '';
-  document.getElementById('quickNote').value = '';
-  setQuickType('in');
-  document.getElementById('modalQuickTx').classList.remove('hidden');
-}
-
-function setQuickType(type) {
-  quickTxType = type;
-  const btnIn  = document.getElementById('quickBtnIn');
-  const btnOut = document.getElementById('quickBtnOut');
-  if (type === 'in') {
-    btnIn.className  = 'flex-1 py-2.5 text-sm rounded-xl border-2 border-blue-500 bg-blue-50 text-blue-700 font-semibold';
-    btnOut.className = 'flex-1 py-2.5 text-sm rounded-xl border-2 border-gray-200 text-gray-500';
-  } else {
-    btnOut.className = 'flex-1 py-2.5 text-sm rounded-xl border-2 border-red-500 bg-red-50 text-red-700 font-semibold';
-    btnIn.className  = 'flex-1 py-2.5 text-sm rounded-xl border-2 border-gray-200 text-gray-500';
-  }
-}
-
-async function doQuickTx() {
-  const qty  = parseInt(document.getElementById('quickQty').value);
-  const note = document.getElementById('quickNote').value.trim();
-  if (!qty || qty < 1) { showToast('수량을 1 이상 입력하세요'); return; }
-  hideModal('modalQuickTx');
-  await processStock(quickTxItemId, quickTxType, qty, note);
-}
-
-async function processStock(itemId, type, qty, note) {
-  const item = stockItems.find(function(i) { return i.id === itemId; });
-  if (!item) { showToast('품목을 찾을 수 없습니다'); return; }
-  const newQty = type === 'in' ? item.quantity + qty : item.quantity - qty;
-  if (newQty < 0) { showToast('재고 부족! 현재: ' + item.quantity + (item.unit || '개')); return; }
-  const { error: updateErr } = await _supabase
-    .from('stock_items')
-    .update({ quantity: newQty, updated_at: new Date().toISOString() })
-    .eq('id', itemId);
-  if (updateErr) { showToast('업데이트 실패: ' + updateErr.message); return; }
-  const { error: logErr } = await _supabase.from('stock_logs').insert({
-    item_id: itemId,
-    type: type,
-    quantity: qty,
-    note: note || null,
-    user_id: currentUser.id,
-    user_email: currentUser.email
-  });
-  if (logErr) console.warn('로그 저장 실패:', logErr.message);
-  const label = type === 'in' ? '입고' : '출고';
-  showToast(item.name + ' ' + qty + (item.unit || '개') + ' ' + label + ' 완료');
-  await loadAll();
-}
-
-// ===================== 실시간 동기화 =====================
-function subscribeRealtime() {
-  if (!_supabase) return;
-  _supabase
-    .channel('stock-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, function() {
-      loadItems();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock_logs' }, function() {
-      loadTx();
-    })
-    .subscribe();
-}
-
-// ===================== UI 헬퍼 =====================
-function showPage(page) {
-  var pages = ['stock','transaction','alerts','settings'];
-  pages.forEach(function(p) {
-    var el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
-    if (el) el.classList.add('hidden');
-    var nav = document.getElementById('nav-' + p);
-    if (nav) nav.className = 'flex-1 flex flex-col items-center py-2.5 nav-inactive';
-  });
-  var active = document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1));
-  if (active) active.classList.remove('hidden');
-  var activeNav = document.getElementById('nav-' + page);
-  if (activeNav) activeNav.className = 'flex-1 flex flex-col items-center py-2.5 nav-active';
-  if (page === 'transaction') loadTx();
-  if (page === 'alerts') loadAlerts();
-}
-
-function showAddItem() {
-  document.getElementById('modalAddItem').classList.remove('hidden');
-}
-
-function hideModal(id) {
-  document.getElementById(id).classList.add('hidden');
-}
-
-function showAlerts() {
-  showPage('alerts');
-}
-
-function showToast(msg) {
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.remove('hidden');
-  setTimeout(function() { el.classList.add('hidden'); }, 2800);
-}
-
-function escHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-// ===================== 앱 시작 =====================
-window.addEventListener('DOMContentLoaded', async function() {
-  if (!initSupabase()) return;
-  const { data } = await _supabase.auth.getSession();
-  if (data.session && data.session.user) {
-    currentUser = data.session.user;
-    enterApp();
-  }
-  _supabase.auth.onAuthStateChange(function(event, session) {
-    if (event === 'SIGNED_IN' && session) {
+  sb.auth.onAuthStateChange(function(event, session) {
+    if (session && session.user) {
       currentUser = session.user;
+      openApp();
     }
   });
-});
 
-// 서비스 워커 등록
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js').catch(function() {});
-  });
-}
+  /* ===================== 앱 ===================== */
+  function openApp() {
+    document.getElementById('authWrap').style.display = 'none';
+    document.getElementById('appWrap').style.display = 'block';
+    loadItems();
+    loadTx();
+  }
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.nav-tabs button').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  /* ===================== 품목 ===================== */
+  function loadItems() {
+    sb.from('stock_items').select('*').order('name').then(function(res) {
+      if (res.error) { console.error(res.error); return; }
+      itemData = res.data || [];
+      renderItems();
+      renderDashboard();
+      renderAlerts();
+    });
+  }
+
+  function renderItems() {
+    var ul = document.getElementById('itemList');
+    if (itemData.length === 0) { ul.innerHTML = '<li class="empty">등록된 품목이 없습니다</li>'; return; }
+    ul.innerHTML = '';
+    itemData.forEach(function(item) {
+      var badgeClass = item.current_stock === 0 ? 'stock-out' : (item.current_stock <= item.min_stock ? 'stock-low' : 'stock-ok');
+      var li = document.createElement('li');
+      li.innerHTML =
+        '<div class="item-info">' +
+          '<div class="item-name">' + item.name + '</div>' +
+          '<div class="item-sub">' + (item.category || '') + (item.location ? ' | ' + item.location : '') + '</div>' +
+        '</div>' +
+        '<span class="stock-badge ' + badgeClass + '">' + item.current_stock + ' ' + (item.unit || '') + '</span>' +
+        '<div class="item-actions">' +
+          '<button class="btn-use" onclick="useItem('' + item.id + '')">사용</button>' +
+          '<button class="btn-restock" onclick="restockItem('' + item.id + '')">입고</button>' +
+          '<button class="btn-del" onclick="deleteItem('' + item.id + '')">삭제</button>' +
+        '</div>';
+      ul.appendChild(li);
+    });
+  }
+
+  function renderDashboard() {
+    var total = itemData.length;
+    var low = itemData.filter(function(i) { return i.current_stock > 0 && i.current_stock <= i.min_stock; }).length;
+    var out = itemData.filter(function(i) { return i.current_stock === 0; }).length;
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('lowCount').textContent = low;
+    document.getElementById('outCount').textContent = out;
+  }
+
+  function renderAlerts() {
+    var ul = document.getElementById('alertList');
+    var alerts = itemData.filter(function(i) { return i.current_stock <= i.min_stock; });
+    if (alerts.length === 0) { ul.innerHTML = '<li style="color:#aaa; font-size:13px; text-align:center; padding:20px; background:#f9f9f9; border-left:none;">알림 없음</li>'; return; }
+    ul.innerHTML = '';
+    alerts.forEach(function(item) {
+      var li = document.createElement('li');
+      li.textContent = item.name + ' — 현재 재고 ' + item.current_stock + ' ' + (item.unit || '') + ' (최소: ' + item.min_stock + ')';
+      ul.appendChild(li);
+    });
+  }
+
+  function addItem() {
+    var name = document.getElementById('newName').value.trim();
+    if (!name) { showMsg('addMsg', '품목명을 입력해주세요', 'error'); return; }
+    var payload = {
+      name: name,
+      category: document.getElementById('newCategory').value.trim(),
+      unit: document.getElementById('newUnit').value.trim(),
+      current_stock: parseInt(document.getElementById('newStock').value) || 0,
+      min_stock: parseInt(document.getElementById('newMinStock').value) || 0,
+      location: document.getElementById('newLocation').value.trim(),
+      created_by: currentUser ? currentUser.id : null
+    };
+    sb.from('stock_items').insert([payload]).then(function(res) {
+      if (res.error) { showMsg('addMsg', res.error.message, 'error'); return; }
+      showMsg('addMsg', '품목이 추가되었습니다!', 'success');
+      document.getElementById('newName').value = '';
+      document.getElementById('newCategory').value = '';
+      document.getElementById('newUnit').value = '';
+      document.getElementById('newStock').value = '';
+      document.getElementById('newMinStock').value = '';
+      document.getElementById('newLocation').value = '';
+      loadItems();
+    });
+  }
+
+  function useItem(id) {
+    var item = itemData.find(function(i) { return i.id === id; });
+    if (!item) return;
+    var qty = parseInt(prompt(item.name + ' 사용 수량?', '1'));
+    if (isNaN(qty) || qty <= 0) return;
+    var newStock = Math.max(0, item.current_stock - qty);
+    sb.from('stock_items').update({ current_stock: newStock }).eq('id', id).then(function(res) {
+      if (res.error) { alert(res.error.message); return; }
+      sb.from('stock_transactions').insert([{ item_id: id, type: 'use', quantity: qty, user_id: currentUser ? currentUser.id : null }]).then(function() {
+        loadItems(); loadTx();
+      });
+    });
+  }
+
+  function restockItem(id) {
+    var item = itemData.find(function(i) { return i.id === id; });
+    if (!item) return;
+    var qty = parseInt(prompt(item.name + ' 입고 수량?', '1'));
+    if (isNaN(qty) || qty <= 0) return;
+    var newStock = item.current_stock + qty;
+    sb.from('stock_items').update({ current_stock: newStock }).eq('id', id).then(function(res) {
+      if (res.error) { alert(res.error.message); return; }
+      sb.from('stock_transactions').insert([{ item_id: id, type: 'restock', quantity: qty, user_id: currentUser ? currentUser.id : null }]).then(function() {
+        loadItems(); loadTx();
+      });
+    });
+  }
+
+  function deleteItem(id) {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    sb.from('stock_items').delete().eq('id', id).then(function(res) {
+      if (res.error) { alert(res.error.message); return; }
+      loadItems();
+    });
+  }
+
+  /* ===================== 이력 ===================== */
+  function loadTx() {
+    sb.from('stock_transactions').select('*, stock_items(name)').order('created_at', { ascending: false }).limit(50).then(function(res) {
+      if (res.error) { console.error(res.error); return; }
+      txData = res.data || [];
+      renderTx();
+    });
+  }
+
+  function renderTx() {
+    var lists = ['recentTx', 'historyList'];
+    lists.forEach(function(listId) {
+      var ul = document.getElementById(listId);
+      if (txData.length === 0) { ul.innerHTML = '<li style="color:#aaa; font-size:13px; text-align:center; padding:20px">이력 없음</li>'; return; }
+      ul.innerHTML = '';
+      var items = listId === 'recentTx' ? txData.slice(0, 5) : txData;
+      items.forEach(function(tx) {
+        var li = document.createElement('li');
+        var typeLabel = tx.type === 'use' ? '사용' : '입고';
+        var typeClass = tx.type === 'use' ? 'tx-use' : 'tx-in';
+        var itemName = tx.stock_items ? tx.stock_items.name : '알 수 없음';
+        var date = new Date(tx.created_at).toLocaleDateString('ko-KR');
+        li.innerHTML = '<span><span class="tx-type ' + typeClass + '">[' + typeLabel + ']</span> ' + itemName + ' ' + tx.quantity + '개</span><span style="color:#aaa">' + date + '</span>';
+        ul.appendChild(li);
+      });
+    });
+  }
 </script>
 </body>
 </html>
