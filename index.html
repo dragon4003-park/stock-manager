@@ -1,609 +1,462 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>소모품 관리 시스템</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; min-height: 100vh; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Pretendard', -apple-system, sans-serif; background:#f0f4ff; min-height:100vh; }
 
-    /* ───── 로그인 ───── */
+    /* ── 로그인 ── */
     #loginPage {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      display:flex; align-items:center; justify-content:center;
+      min-height:100vh;
+      background: #1e3a8a;
     }
-    .login-card {
-      background: #fff; border-radius: 16px; padding: 48px 40px;
-      width: 100%; max-width: 400px;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    .login-box {
+      background:#fff; border-radius:16px; padding:48px 40px;
+      width:100%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,0.18);
     }
-    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo {
+      text-align:center; margin-bottom:32px;
+    }
     .login-logo .icon {
-      width: 68px; height: 68px;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      border-radius: 18px; display: inline-flex;
-      align-items: center; justify-content: center;
-      font-size: 30px; margin-bottom: 14px;
+      font-size:48px; display:block; margin-bottom:10px;
     }
-    .login-logo h1 { font-size: 21px; font-weight: 700; color: #111827; }
-    .login-logo p  { font-size: 13px; color: #9ca3af; margin-top: 4px; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-    .form-group input, .form-group select {
-      width: 100%; padding: 12px 16px;
-      border: 1.5px solid #e5e7eb; border-radius: 10px;
-      font-size: 14px; color: #111827; outline: none;
-      transition: border-color .2s;
+    .login-logo h1 { font-size:22px; color:#1e3a8a; font-weight:700; }
+    .login-logo p { font-size:13px; color:#6b7280; margin-top:4px; }
+    .login-box input {
+      width:100%; padding:13px 16px; border:1.5px solid #d1d5db;
+      border-radius:8px; font-size:15px; margin-bottom:12px;
+      outline:none; transition:border .2s;
     }
-    .form-group input:focus, .form-group select:focus { border-color: #3b82f6; }
+    .login-box input:focus { border-color:#2563eb; }
     .btn-login {
-      width: 100%; padding: 14px;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      color: #fff; border: none; border-radius: 10px;
-      font-size: 15px; font-weight: 700; cursor: pointer;
-      margin-top: 8px; transition: opacity .2s;
+      width:100%; padding:14px; background:#2563eb; color:#fff;
+      border:none; border-radius:8px; font-size:16px; font-weight:600;
+      cursor:pointer; transition:background .2s; margin-top:4px;
     }
-    .btn-login:hover { opacity: .88; }
-    .error-msg {
-      background: #fef2f2; color: #dc2626;
-      padding: 10px 14px; border-radius: 8px;
-      font-size: 13px; margin-bottom: 12px; display: none;
-    }
+    .btn-login:hover { background:#1d4ed8; }
+    #loginError { color:#ef4444; font-size:13px; margin-top:10px; text-align:center; display:none; }
 
-    /* ───── 메인 ───── */
-    #mainApp { display: none; }
-
-    .header {
-      background: #fff; border-bottom: 1px solid #e5e7eb;
-      padding: 0 24px; height: 62px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    /* ── 메인 ── */
+    #mainPage { display:none; }
+    .topbar {
+      background:#1e3a8a; color:#fff; padding:0 24px;
+      display:flex; align-items:center; justify-content:space-between;
+      height:56px;
     }
-    .header-left { display: flex; align-items: center; gap: 12px; }
-    .header-icon {
-      width: 38px; height: 38px;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      border-radius: 10px; display: flex;
-      align-items: center; justify-content: center; font-size: 19px;
-    }
-    .header h1 { font-size: 17px; font-weight: 700; color: #111827; }
-    .header-right { display: flex; align-items: center; gap: 10px; }
-    .user-badge {
-      background: #eff6ff; color: #1d4ed8;
-      padding: 5px 12px; border-radius: 6px;
-      font-size: 13px; font-weight: 500;
-    }
+    .topbar h1 { font-size:18px; font-weight:700; }
+    .topbar-right { display:flex; align-items:center; gap:16px; }
+    .topbar-right span { font-size:13px; opacity:.8; }
     .btn-logout {
-      padding: 7px 14px; background: transparent;
-      border: 1.5px solid #e5e7eb; border-radius: 8px;
-      font-size: 13px; cursor: pointer; color: #6b7280;
-      transition: all .2s;
+      background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3);
+      color:#fff; padding:6px 14px; border-radius:6px; font-size:13px;
+      cursor:pointer; transition:background .2s;
     }
-    .btn-logout:hover { border-color: #dc2626; color: #dc2626; }
+    .btn-logout:hover { background:rgba(255,255,255,0.25); }
 
-    .content { padding: 24px; max-width: 1200px; margin: 0 auto; }
-
-    /* 요약 카드 */
-    .summary-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
-      gap: 14px; margin-bottom: 22px;
+    /* 카드 요약 */
+    .summary { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; padding:20px 24px 0; }
+    .card {
+      background:#fff; border-radius:12px; padding:20px;
+      border:1px solid #e5e7eb;
     }
-    .summary-card {
-      background: #fff; border-radius: 12px; padding: 18px 20px;
-      border: 1px solid #e5e7eb;
-      display: flex; align-items: center; gap: 14px;
-    }
-    .card-icon {
-      width: 48px; height: 48px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; flex-shrink: 0;
-    }
-    .ci-blue   { background: #eff6ff; }
-    .ci-green  { background: #f0fdf4; }
-    .ci-red    { background: #fef2f2; }
-    .ci-yellow { background: #fffbeb; }
-    .card-info h3 { font-size: 26px; font-weight: 700; color: #111827; }
-    .card-info p  { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+    .card .label { font-size:12px; color:#6b7280; margin-bottom:8px; font-weight:500; }
+    .card .value { font-size:28px; font-weight:700; color:#1e3a8a; }
+    .card.warn .value { color:#ef4444; }
 
     /* 탭 */
-    .tabs {
-      display: flex; gap: 4px;
-      background: #fff; padding: 5px;
-      border-radius: 10px; border: 1px solid #e5e7eb;
-      margin-bottom: 14px; width: fit-content;
+    .tabs { display:flex; gap:0; margin:20px 24px 0; border-bottom:2px solid #e5e7eb; }
+    .tab {
+      padding:10px 24px; font-size:14px; font-weight:600; cursor:pointer;
+      color:#6b7280; border-bottom:2px solid transparent; margin-bottom:-2px;
+      transition:color .2s;
     }
-    .tab-btn {
-      padding: 8px 22px; border: none;
-      background: transparent; border-radius: 7px;
-      font-size: 14px; font-weight: 500;
-      cursor: pointer; color: #6b7280; transition: all .2s;
-    }
-    .tab-btn.active {
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      color: #fff; font-weight: 700;
-    }
+    .tab.active { color:#2563eb; border-bottom-color:#2563eb; }
 
-    /* 섹션 */
-    .section {
-      background: #fff; border-radius: 12px;
-      border: 1px solid #e5e7eb; overflow: hidden;
+    /* 콘텐츠 */
+    .tab-content { padding:20px 24px; display:none; }
+    .tab-content.active { display:block; }
+
+    /* 툴바 */
+    .toolbar { display:flex; gap:10px; margin-bottom:16px; align-items:center; }
+    .toolbar input {
+      padding:9px 14px; border:1.5px solid #d1d5db; border-radius:8px;
+      font-size:14px; outline:none; flex:1; max-width:260px;
     }
-    .section-header {
-      padding: 16px 20px; border-bottom: 1px solid #f3f4f6;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .section-header h2 { font-size: 15px; font-weight: 700; color: #111827; }
-    .btn-primary {
-      padding: 8px 16px;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      color: #fff; border: none; border-radius: 8px;
-      font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .2s;
-    }
-    .btn-primary:hover { opacity: .88; }
+    .toolbar input:focus { border-color:#2563eb; }
+    .btn { padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:background .2s; }
+    .btn-primary { background:#2563eb; color:#fff; }
+    .btn-primary:hover { background:#1d4ed8; }
+    .btn-green { background:#16a34a; color:#fff; }
+    .btn-green:hover { background:#15803d; }
+    .btn-red { background:#ef4444; color:#fff; }
+    .btn-red:hover { background:#dc2626; }
+    .btn-gray { background:#f3f4f6; color:#374151; border:1px solid #d1d5db; }
+    .btn-gray:hover { background:#e5e7eb; }
+    .btn-sm { padding:5px 12px; font-size:12px; }
 
     /* 테이블 */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th {
-      padding: 10px 16px; text-align: left;
-      font-size: 11px; font-weight: 700; color: #9ca3af;
-      background: #f9fafb; border-bottom: 1px solid #f3f4f6;
-      text-transform: uppercase; letter-spacing: .5px;
-    }
-    td {
-      padding: 13px 16px; font-size: 14px; color: #374151;
-      border-bottom: 1px solid #f9fafb;
-    }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #f9fbff; }
-
-    .badge {
-      display: inline-block; padding: 3px 10px;
-      border-radius: 5px; font-size: 12px; font-weight: 600;
-    }
-    .b-ok  { background: #f0fdf4; color: #16a34a; }
-    .b-low { background: #fef2f2; color: #dc2626; }
-    .b-in  { background: #eff6ff; color: #1d4ed8; }
-    .b-out { background: #fff7ed; color: #c2410c; }
-
-    .btn-sm {
-      padding: 5px 12px; border-radius: 6px;
-      font-size: 12px; font-weight: 600;
-      cursor: pointer; border: none; transition: all .2s;
-      margin-right: 4px;
-    }
-    .bs-in   { background: #eff6ff; color: #1d4ed8; }
-    .bs-in:hover  { background: #1d4ed8; color: #fff; }
-    .bs-out  { background: #fff7ed; color: #c2410c; }
-    .bs-out:hover { background: #c2410c; color: #fff; }
-    .bs-edit { background: #f3f4f6; color: #4b5563; }
-    .bs-edit:hover { background: #4b5563; color: #fff; }
-    .bs-del  { background: #fef2f2; color: #dc2626; }
-    .bs-del:hover  { background: #dc2626; color: #fff; }
-
-    .empty-state { text-align: center; padding: 48px; color: #d1d5db; }
-    .empty-state .ei { font-size: 40px; margin-bottom: 10px; }
-    .empty-state p { font-size: 14px; }
+    .tbl-wrap { background:#fff; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden; }
+    table { width:100%; border-collapse:collapse; }
+    thead th { background:#f8fafc; padding:11px 16px; text-align:left; font-size:13px; color:#374151; font-weight:600; border-bottom:1px solid #e5e7eb; }
+    tbody td { padding:11px 16px; font-size:14px; color:#111827; border-bottom:1px solid #f3f4f6; }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:hover { background:#f8fafc; }
+    .badge { display:inline-block; padding:2px 10px; border-radius:4px; font-size:12px; font-weight:600; }
+    .badge-green { background:#dcfce7; color:#16a34a; }
+    .badge-red { background:#fee2e2; color:#ef4444; }
+    .badge-in { background:#dbeafe; color:#1d4ed8; }
+    .badge-out { background:#fef9c3; color:#b45309; }
+    .low-stock td { background:#fff5f5 !important; }
 
     /* 모달 */
     .modal-bg {
-      position: fixed; inset: 0; background: rgba(0,0,0,.45);
-      z-index: 1000; align-items: center; justify-content: center;
-      padding: 20px; display: none;
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45);
+      z-index:100; align-items:center; justify-content:center;
     }
+    .modal-bg.open { display:flex; }
     .modal {
-      background: #fff; border-radius: 16px; padding: 28px;
-      width: 100%; max-width: 440px;
-      box-shadow: 0 24px 64px rgba(0,0,0,.18);
+      background:#fff; border-radius:14px; padding:32px; width:100%;
+      max-width:420px; box-shadow:0 8px 40px rgba(0,0,0,0.2);
     }
-    .modal h2 { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 20px; }
-    .modal-footer { display: flex; gap: 10px; margin-top: 20px; }
-    .btn-cancel {
-      flex: 1; padding: 12px; background: #f3f4f6;
-      border: none; border-radius: 8px;
-      font-size: 14px; font-weight: 600; cursor: pointer; color: #6b7280;
+    .modal h2 { font-size:18px; font-weight:700; color:#1e3a8a; margin-bottom:20px; }
+    .modal input, .modal select {
+      width:100%; padding:11px 14px; border:1.5px solid #d1d5db;
+      border-radius:8px; font-size:14px; margin-bottom:12px; outline:none;
     }
-    .btn-confirm {
-      flex: 2; padding: 12px;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      color: #fff; border: none; border-radius: 8px;
-      font-size: 14px; font-weight: 700; cursor: pointer;
-    }
-    .hidden { display: none !important; }
+    .modal input:focus, .modal select:focus { border-color:#2563eb; }
+    .modal-btns { display:flex; gap:10px; margin-top:4px; }
+    .modal-btns .btn { flex:1; padding:11px; }
+    .empty { text-align:center; padding:40px; color:#9ca3af; font-size:14px; }
   </style>
 </head>
 <body>
 
-<!-- ═══ 로그인 ═══ -->
+<!-- ───────── 로그인 ───────── -->
 <div id="loginPage">
-  <div class="login-card">
+  <div class="login-box">
     <div class="login-logo">
-      <div class="icon">📦</div>
+      <span class="icon">📦</span>
       <h1>소모품 관리 시스템</h1>
-      <p>관리자 계정으로 로그인하세요</p>
+      <p>아주팜 재고 관리 플랫폼</p>
     </div>
-    <div class="error-msg" id="loginError"></div>
-    <div class="form-group">
-      <label>이메일 주소</label>
-      <input type="email" id="loginEmail" placeholder="example@email.com">
-    </div>
-    <div class="form-group">
-      <label>비밀번호</label>
-      <input type="password" id="loginPw" placeholder="비밀번호 입력">
-    </div>
+    <input type="email" id="loginEmail" placeholder="이메일 주소"/>
+    <input type="password" id="loginPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="btn-login" onclick="doLogin()">로그인</button>
+    <p id="loginError">이메일 또는 비밀번호를 확인해주세요.</p>
   </div>
 </div>
 
-<!-- ═══ 메인 ═══ -->
-<div id="mainApp">
-  <div class="header">
-    <div class="header-left">
-      <div class="header-icon">📦</div>
-      <h1>소모품 관리 시스템</h1>
-    </div>
-    <div class="header-right">
-      <span class="user-badge" id="userEmail"></span>
+<!-- ───────── 메인 ───────── -->
+<div id="mainPage">
+  <div class="topbar">
+    <h1>📦 소모품 관리 시스템</h1>
+    <div class="topbar-right">
+      <span id="userEmail"></span>
       <button class="btn-logout" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
 
-  <div class="content">
-    <!-- 요약 -->
-    <div class="summary-grid">
-      <div class="summary-card">
-        <div class="card-icon ci-blue">📦</div>
-        <div class="card-info"><h3 id="cTotal">0</h3><p>전체 품목</p></div>
-      </div>
-      <div class="summary-card">
-        <div class="card-icon ci-green">✅</div>
-        <div class="card-info"><h3 id="cQty">0</h3><p>총 재고 수량</p></div>
-      </div>
-      <div class="summary-card">
-        <div class="card-icon ci-red">⚠️</div>
-        <div class="card-info"><h3 id="cLow">0</h3><p>재고 부족 품목</p></div>
-      </div>
-      <div class="summary-card">
-        <div class="card-icon ci-yellow">📋</div>
-        <div class="card-info"><h3 id="cToday">0</h3><p>오늘 입출고</p></div>
-      </div>
-    </div>
+  <!-- 요약 카드 -->
+  <div class="summary">
+    <div class="card"><div class="label">전체 품목</div><div class="value" id="cntTotal">0</div></div>
+    <div class="card"><div class="label">총 재고 수량</div><div class="value" id="cntQty">0</div></div>
+    <div class="card warn"><div class="label">재고 부족 품목</div><div class="value" id="cntLow">0</div></div>
+    <div class="card"><div class="label">오늘 입출고</div><div class="value" id="cntToday">0</div></div>
+  </div>
 
-    <!-- 탭 -->
-    <div class="tabs">
-      <button class="tab-btn active" id="tbItems"   onclick="showTab('items')">재고 현황</button>
-      <button class="tab-btn"        id="tbHistory" onclick="showTab('history')">입출고 이력</button>
-    </div>
+  <!-- 탭 -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('stock')">재고 현황</div>
+    <div class="tab" onclick="switchTab('history')">입출고 이력</div>
+  </div>
 
-    <!-- 재고 현황 -->
-    <div id="tabItems" class="section">
-      <div class="section-header">
-        <h2>재고 현황</h2>
-        <button class="btn-primary" onclick="openAddModal()">+ 품목 추가</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>품목명</th><th>현재 수량</th><th>최소 수량</th>
-              <th>상태</th><th>관리</th>
-            </tr>
-          </thead>
-          <tbody id="itemsBody"></tbody>
-        </table>
-      </div>
+  <!-- 재고 현황 -->
+  <div id="tab-stock" class="tab-content active">
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="품목 검색..." oninput="renderItems()"/>
+      <button class="btn btn-primary" onclick="openAddModal()">+ 품목 추가</button>
     </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>품목명</th><th style="text-align:right">현재 수량</th>
+          <th style="text-align:right">최소 수량</th><th>상태</th><th>관리</th>
+        </tr></thead>
+        <tbody id="itemTbody"><tr><td colspan="5" class="empty">데이터를 불러오는 중...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
 
-    <!-- 이력 -->
-    <div id="tabHistory" class="section hidden">
-      <div class="section-header"><h2>입출고 이력</h2></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>일시</th><th>품목명</th><th>구분</th>
-              <th>수량</th><th>메모</th><th>처리자</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody"></tbody>
-        </table>
-      </div>
+  <!-- 이력 -->
+  <div id="tab-history" class="tab-content">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>일시</th><th>품목명</th><th>구분</th>
+          <th style="text-align:right">수량</th><th>메모</th><th>처리자</th>
+        </tr></thead>
+        <tbody id="histTbody"><tr><td colspan="6" class="empty">데이터를 불러오는 중...</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<!-- 품목 추가 모달 -->
+<!-- ───────── 품목 추가 모달 ───────── -->
 <div class="modal-bg" id="addModal">
   <div class="modal">
     <h2>품목 추가</h2>
-    <div class="form-group"><label>품목명</label><input type="text" id="addName" placeholder="품목명 입력"></div>
-    <div class="form-group"><label>초기 수량</label><input type="number" id="addQty" placeholder="0" min="0"></div>
-    <div class="form-group"><label>최소 수량 (부족 기준)</label><input type="number" id="addMin" placeholder="0" min="0"></div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('addModal')">취소</button>
-      <button class="btn-confirm" onclick="addItem()">추가하기</button>
+    <input type="text" id="newName" placeholder="품목명"/>
+    <input type="number" id="newQty" placeholder="초기 수량" min="0"/>
+    <input type="number" id="newMinQty" placeholder="최소 수량 (부족 기준)" min="0"/>
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="closeModal('addModal')">취소</button>
+      <button class="btn btn-primary" onclick="addItem()">추가</button>
     </div>
   </div>
 </div>
 
-<!-- 입출고 모달 -->
+<!-- ───────── 입출고 모달 ───────── -->
 <div class="modal-bg" id="txModal">
   <div class="modal">
-    <h2 id="txTitle">입고 처리</h2>
-    <div class="form-group"><label>수량</label><input type="number" id="txQty" placeholder="수량 입력" min="1"></div>
-    <div class="form-group"><label>메모 (선택)</label><input type="text" id="txMemo" placeholder="메모 입력"></div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('txModal')">취소</button>
-      <button class="btn-confirm" onclick="doTx()">확인</button>
+    <h2 id="txTitle">입고</h2>
+    <input type="number" id="txQty" placeholder="수량" min="1"/>
+    <input type="text" id="txMemo" placeholder="메모 (선택)"/>
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="closeModal('txModal')">취소</button>
+      <button class="btn btn-primary" id="txConfirm" onclick="doTransaction()">확인</button>
     </div>
   </div>
 </div>
 
-<!-- 수정 모달 -->
+<!-- ───────── 수정 모달 ───────── -->
 <div class="modal-bg" id="editModal">
   <div class="modal">
     <h2>품목 수정</h2>
-    <div class="form-group"><label>품목명</label><input type="text" id="editName"></div>
-    <div class="form-group"><label>현재 수량</label><input type="number" id="editQty" min="0"></div>
-    <div class="form-group"><label>최소 수량</label><input type="number" id="editMin" min="0"></div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('editModal')">취소</button>
-      <button class="btn-confirm" onclick="saveEdit()">저장하기</button>
+    <input type="text" id="editName" placeholder="품목명"/>
+    <input type="number" id="editQty" placeholder="수량" min="0"/>
+    <input type="number" id="editMinQty" placeholder="최소 수량" min="0"/>
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="closeModal('editModal')">취소</button>
+      <button class="btn btn-primary" onclick="saveEdit()">저장</button>
     </div>
   </div>
 </div>
 
 <script>
-  var SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-  var SUPABASE_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
-  var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  var curUser  = null;
-  var txItemId = null;
-  var txType   = null;
-  var editId   = null;
+  let currentUser = null;
+  let items = [];
+  let txItem = null;
+  let txType = null;
+  let editItem = null;
 
-  /* ── 초기화 ── */
-  window.onload = async function () {
-    var res = await db.auth.getSession();
-    if (res.data.session) {
-      curUser = res.data.session.user;
-      showMain();
-    }
-  };
-
-  /* ── 로그인 ── */
-  async function doLogin() {
-    var email = document.getElementById('loginEmail').value.trim();
-    var pw    = document.getElementById('loginPw').value;
-    var errEl = document.getElementById('loginError');
-    errEl.style.display = 'none';
-
-    if (!email || !pw) {
-      errEl.textContent = '이메일과 비밀번호를 입력해주세요.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    var result = await db.auth.signInWithPassword({ email: email, password: pw });
-    if (result.error) {
-      errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    curUser = result.data.user;
-    showMain();
-  }
-
-  /* ── 로그아웃 ── */
-  async function doLogout() {
-    await db.auth.signOut();
-    curUser = null;
-    document.getElementById('mainApp').style.display  = 'none';
-    document.getElementById('loginPage').style.display = 'flex';
-  }
-
-  /* ── 메인 표시 ── */
-  function showMain() {
-    document.getElementById('loginPage').style.display = 'none';
-    document.getElementById('mainApp').style.display   = 'block';
-    document.getElementById('userEmail').textContent   = curUser.email;
-    loadItems();
-    loadHistory();
-  }
-
-  /* ── 탭 전환 ── */
-  function showTab(tab) {
-    document.getElementById('tabItems').classList.add('hidden');
-    document.getElementById('tabHistory').classList.add('hidden');
-    document.getElementById('tbItems').classList.remove('active');
-    document.getElementById('tbHistory').classList.remove('active');
-    if (tab === 'items') {
-      document.getElementById('tabItems').classList.remove('hidden');
-      document.getElementById('tbItems').classList.add('active');
+  // ── 인증 ──
+  sb.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      currentUser = session.user;
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('mainPage').style.display = 'block';
+      document.getElementById('userEmail').textContent = currentUser.email;
+      loadAll();
     } else {
-      document.getElementById('tabHistory').classList.remove('hidden');
-      document.getElementById('tbHistory').classList.add('active');
+      currentUser = null;
+      document.getElementById('loginPage').style.display = 'flex';
+      document.getElementById('mainPage').style.display = 'none';
     }
+  });
+
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pw = document.getElementById('loginPw').value;
+    const err = document.getElementById('loginError');
+    err.style.display = 'none';
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) { err.style.display = 'block'; }
   }
 
-  /* ── 품목 로드 ── */
+  async function doLogout() {
+    await sb.auth.signOut();
+  }
+
+  // ── 데이터 로드 ──
+  async function loadAll() {
+    await loadItems();
+    await loadHistory();
+    updateSummary();
+  }
+
   async function loadItems() {
-    var res = await db.from('items').select('*').order('created_at', { ascending: true });
-    var items = res.data || [];
-
-    document.getElementById('cTotal').textContent = items.length;
-    var sumQty = items.reduce(function (s, i) { return s + i.quantity; }, 0);
-    document.getElementById('cQty').textContent = sumQty;
-    var lowCnt = items.filter(function (i) { return i.quantity <= i.min_qty; }).length;
-    document.getElementById('cLow').textContent = lowCnt;
-
-    var tbody = document.getElementById('itemsBody');
-    if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="ei">📭</div><p>품목이 없습니다. 품목을 추가해주세요!</p></div></td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = items.map(function (item) {
-      var low    = item.quantity <= item.min_qty;
-      var badge  = low ? '<span class="badge b-low">부족</span>' : '<span class="badge b-ok">정상</span>';
-      var qColor = low ? '#dc2626' : '#111827';
-      return '<tr>' +
-        '<td><strong>' + esc(item.name) + '</strong></td>' +
-        '<td><strong style="color:' + qColor + ';font-size:16px">' + item.quantity + '</strong></td>' +
-        '<td>' + item.min_qty + '</td>' +
-        '<td>' + badge + '</td>' +
-        '<td>' +
-          '<button class="btn-sm bs-in"  onclick="openTx(\'' + item.id + '\',\'in\')">입고</button>' +
-          '<button class="btn-sm bs-out" onclick="openTx(\'' + item.id + '\',\'out\')">출고</button>' +
-          '<button class="btn-sm bs-edit" onclick="openEdit(\'' + item.id + '\')">수정</button>' +
-        '</td>' +
-      '</tr>';
-    }).join('');
+    const { data, error } = await sb.from('items').select('*').order('name');
+    if (!error) { items = data || []; }
+    renderItems();
   }
 
-  /* ── 이력 로드 ── */
   async function loadHistory() {
-    var res = await db.from('history').select('*').order('created_at', { ascending: false }).limit(200);
-    var hist = res.data || [];
+    const { data, error } = await sb.from('history').select('*').order('created_at', { ascending: false }).limit(100);
+    if (!error) { renderHistory(data || []); }
+  }
 
-    var today = new Date().toDateString();
-    var todayCnt = hist.filter(function (h) {
-      return new Date(h.created_at).toDateString() === today;
-    }).length;
-    document.getElementById('cToday').textContent = todayCnt;
+  function updateSummary() {
+    document.getElementById('cntTotal').textContent = items.length;
+    document.getElementById('cntQty').textContent = items.reduce((a,b) => a + (b.quantity||0), 0);
+    document.getElementById('cntLow').textContent = items.filter(i => i.quantity <= i.min_qty).length;
+  }
 
-    var tbody = document.getElementById('historyBody');
-    if (hist.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="ei">📭</div><p>이력이 없습니다</p></div></td></tr>';
+  async function updateTodayCount() {
+    const today = new Date().toISOString().slice(0,10);
+    const { count } = await sb.from('history').select('*', {count:'exact', head:true})
+      .gte('created_at', today + 'T00:00:00')
+      .lte('created_at', today + 'T23:59:59');
+    document.getElementById('cntToday').textContent = count || 0;
+  }
+
+  // ── 렌더 ──
+  function renderItems() {
+    const q = (document.getElementById('searchInput').value || '').toLowerCase();
+    const filtered = items.filter(i => i.name.toLowerCase().includes(q));
+    const tbody = document.getElementById('itemTbody');
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">품목이 없습니다.</td></tr>';
       return;
     }
-
-    tbody.innerHTML = hist.map(function (h) {
-      var d  = new Date(h.created_at);
-      var dt = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
-               ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-      var badge = h.type === 'in'
-        ? '<span class="badge b-in">입고</span>'
-        : '<span class="badge b-out">출고</span>';
-      return '<tr>' +
-        '<td style="font-size:12px;color:#9ca3af">' + dt + '</td>' +
-        '<td>' + esc(h.item_name) + '</td>' +
-        '<td>' + badge + '</td>' +
-        '<td><strong>' + h.quantity + '</strong></td>' +
-        '<td style="color:#6b7280">' + esc(h.memo || '-') + '</td>' +
-        '<td style="font-size:12px;color:#9ca3af">' + esc(h.user_email || '') + '</td>' +
-      '</tr>';
+    tbody.innerHTML = filtered.map(item => {
+      const isLow = item.quantity <= item.min_qty;
+      const badge = isLow
+        ? '<span class="badge badge-red">부족</span>'
+        : '<span class="badge badge-green">정상</span>';
+      return `<tr class="${isLow ? 'low-stock' : ''}">
+        <td><strong>${item.name}</strong></td>
+        <td style="text-align:right;font-weight:700;color:${isLow?'#ef4444':'#111'}">${item.quantity}</td>
+        <td style="text-align:right">${item.min_qty}</td>
+        <td>${badge}</td>
+        <td>
+          <button class="btn btn-green btn-sm" onclick="openTx('${item.id}','in')">입고</button>
+          <button class="btn btn-red btn-sm" style="margin:0 4px" onclick="openTx('${item.id}','out')">출고</button>
+          <button class="btn btn-gray btn-sm" onclick="openEdit('${item.id}')">수정</button>
+        </td>
+      </tr>`;
     }).join('');
   }
 
-  /* ── 품목 추가 모달 ── */
+  function renderHistory(hist) {
+    const tbody = document.getElementById('histTbody');
+    if (!hist.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">이력이 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = hist.map(h => {
+      const dt = new Date(h.created_at);
+      const dateStr = dt.toLocaleDateString('ko-KR') + ' ' + dt.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'});
+      const badge = h.type === 'in'
+        ? '<span class="badge badge-in">입고</span>'
+        : '<span class="badge badge-out">출고</span>';
+      return `<tr>
+        <td style="color:#6b7280;font-size:13px">${dateStr}</td>
+        <td>${h.item_name}</td>
+        <td>${badge}</td>
+        <td style="text-align:right;font-weight:600">${h.quantity}</td>
+        <td style="color:#6b7280">${h.memo || '-'}</td>
+        <td style="color:#6b7280;font-size:13px">${h.user_email || '-'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── 탭 ──
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'history') { loadHistory(); updateTodayCount(); }
+  }
+
+  // ── 품목 추가 ──
   function openAddModal() {
-    document.getElementById('addName').value = '';
-    document.getElementById('addQty').value  = '';
-    document.getElementById('addMin').value  = '';
-    document.getElementById('addModal').style.display = 'flex';
+    document.getElementById('newName').value = '';
+    document.getElementById('newQty').value = '';
+    document.getElementById('newMinQty').value = '';
+    document.getElementById('addModal').classList.add('open');
   }
 
   async function addItem() {
-    var name = document.getElementById('addName').value.trim();
-    var qty  = parseInt(document.getElementById('addQty').value) || 0;
-    var min  = parseInt(document.getElementById('addMin').value)  || 0;
+    const name = document.getElementById('newName').value.trim();
+    const qty = parseInt(document.getElementById('newQty').value) || 0;
+    const minQty = parseInt(document.getElementById('newMinQty').value) || 0;
     if (!name) { alert('품목명을 입력해주세요.'); return; }
-
-    var res = await db.from('items').insert({ name: name, quantity: qty, min_qty: min });
-    if (res.error) { alert('오류: ' + res.error.message); return; }
-
+    const { error } = await sb.from('items').insert({ name, quantity: qty, min_qty: minQty });
+    if (error) { alert('추가 실패: ' + error.message); return; }
     closeModal('addModal');
-    loadItems();
+    await loadItems();
+    updateSummary();
   }
 
-  /* ── 입출고 모달 ── */
+  // ── 입출고 ──
   function openTx(id, type) {
-    txItemId = id;
-    txType   = type;
-    document.getElementById('txTitle').textContent = type === 'in' ? '입고 처리' : '출고 처리';
-    document.getElementById('txQty').value  = '';
+    txItem = items.find(i => i.id === id);
+    txType = type;
+    document.getElementById('txTitle').textContent = type === 'in' ? '입고' : '출고';
+    document.getElementById('txQty').value = '';
     document.getElementById('txMemo').value = '';
-    document.getElementById('txModal').style.display = 'flex';
+    document.getElementById('txModal').classList.add('open');
   }
 
-  async function doTx() {
-    var qty  = parseInt(document.getElementById('txQty').value);
-    var memo = document.getElementById('txMemo').value.trim();
+  async function doTransaction() {
+    const qty = parseInt(document.getElementById('txQty').value);
+    const memo = document.getElementById('txMemo').value.trim();
     if (!qty || qty <= 0) { alert('수량을 입력해주세요.'); return; }
-
-    var fetchRes = await db.from('items').select('*').eq('id', txItemId).single();
-    if (fetchRes.error) { alert('품목 조회 오류'); return; }
-
-    var item   = fetchRes.data;
-    var newQty = txType === 'in' ? item.quantity + qty : item.quantity - qty;
-
-    if (newQty < 0) { alert('재고 부족! 현재 수량: ' + item.quantity); return; }
-
-    var upRes = await db.from('items').update({ quantity: newQty }).eq('id', txItemId);
-    if (upRes.error) { alert('수정 오류: ' + upRes.error.message); return; }
-
-    await db.from('history').insert({
-      item_id: txItemId, item_name: item.name,
-      type: txType, quantity: qty,
-      memo: memo, user_email: curUser.email
+    if (txType === 'out' && qty > txItem.quantity) { alert('출고 수량이 현재 재고보다 많습니다.'); return; }
+    const newQty = txType === 'in' ? txItem.quantity + qty : txItem.quantity - qty;
+    const { error: e1 } = await sb.from('items').update({ quantity: newQty }).eq('id', txItem.id);
+    if (e1) { alert('오류: ' + e1.message); return; }
+    await sb.from('history').insert({
+      item_id: txItem.id, item_name: txItem.name,
+      type: txType, quantity: qty, memo,
+      user_email: currentUser.email
     });
-
     closeModal('txModal');
-    loadItems();
-    loadHistory();
+    await loadItems();
+    updateSummary();
   }
 
-  /* ── 수정 모달 ── */
+  // ── 수정 ──
   function openEdit(id) {
-    editId = id;
-    db.from('items').select('*').eq('id', id).single().then(function (res) {
-      var item = res.data;
-      if (!item) return;
-      document.getElementById('editName').value = item.name;
-      document.getElementById('editQty').value  = item.quantity;
-      document.getElementById('editMin').value  = item.min_qty;
-      document.getElementById('editModal').style.display = 'flex';
-    });
+    editItem = items.find(i => i.id === id);
+    document.getElementById('editName').value = editItem.name;
+    document.getElementById('editQty').value = editItem.quantity;
+    document.getElementById('editMinQty').value = editItem.min_qty;
+    document.getElementById('editModal').classList.add('open');
   }
 
   async function saveEdit() {
-    var name = document.getElementById('editName').value.trim();
-    var qty  = parseInt(document.getElementById('editQty').value) || 0;
-    var min  = parseInt(document.getElementById('editMin').value)  || 0;
+    const name = document.getElementById('editName').value.trim();
+    const qty = parseInt(document.getElementById('editQty').value) || 0;
+    const minQty = parseInt(document.getElementById('editMinQty').value) || 0;
     if (!name) { alert('품목명을 입력해주세요.'); return; }
-
-    var res = await db.from('items').update({ name: name, quantity: qty, min_qty: min }).eq('id', editId);
-    if (res.error) { alert('오류: ' + res.error.message); return; }
-
+    const { error } = await sb.from('items').update({ name, quantity: qty, min_qty: minQty }).eq('id', editItem.id);
+    if (error) { alert('오류: ' + error.message); return; }
     closeModal('editModal');
-    loadItems();
+    await loadItems();
+    updateSummary();
   }
 
-  /* ── 유틸 ── */
-  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-  function esc(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // ── 모달 닫기 ──
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
   }
 
-  function pad(n) { return n < 10 ? '0' + n : '' + n; }
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
-      if (document.getElementById('loginPage').style.display !== 'none') {
-        doLogin();
-      }
-    }
+  document.querySelectorAll('.modal-bg').forEach(bg => {
+    bg.addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('open');
+    });
   });
 </script>
-
 </body>
 </html>
