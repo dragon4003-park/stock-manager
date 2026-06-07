@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>실험실 소모품 관리 시스템</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>
   <style>
     body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    .badge-normal  { background:#dcfce7; color:#166534; }
-    .badge-low     { background:#fef9c3; color:#854d0e; }
-    .badge-empty   { background:#fee2e2; color:#991b1b; }
-    .dup-warning   { background:#fff7ed; border:1px solid #fb923c; border-radius:6px; padding:8px 12px; }
-    .tab-active    { border-bottom:2px solid #2563eb !important; color:#2563eb !important; }
+    .badge-normal { background:#dcfce7; color:#166534; }
+    .badge-low    { background:#fef9c3; color:#854d0e; }
+    .badge-empty  { background:#fee2e2; color:#991b1b; }
+    .dup-warning  { background:#fff7ed; border:1px solid #fb923c; border-radius:6px; padding:8px 12px; }
+    .tab-active   { border-bottom:2px solid #2563eb !important; color:#2563eb !important; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -165,7 +165,7 @@
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">품명 <span class="text-red-500">*</span></label>
-            <input id="regName" type="text" placeholder="예: TLC 플레이트 (Silica, 10x10 cm)"
+            <input id="regName" type="text" placeholder="예: TLC 플레이트 (Silica, 10×10 cm)"
                    oninput="onRegNameInput()"
                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <div id="dupWarning" class="hidden mt-2 dup-warning">
@@ -384,7 +384,6 @@
   </div>
 </div>
 
-<!-- ===== SCRIPT ===== -->
 <script>
 /* Supabase 초기화 */
 const SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
@@ -393,17 +392,17 @@ const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* 전역 상태 */
-let items        = [];
-let transactions = [];
-let currentType  = 'in';
-let deleteTargetId = null;
-let isCustomCat  = false;
+var items          = [];
+var transactions   = [];
+var currentType    = 'in';
+var deleteTargetId = null;
+var isCustomCat    = false;
 
-/* 인증 */
+/* ── 인증 ── */
 async function login() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw    = document.getElementById('loginPw').value;
-  const errEl = document.getElementById('loginError');
+  var email  = document.getElementById('loginEmail').value.trim();
+  var pw     = document.getElementById('loginPw').value;
+  var errEl  = document.getElementById('loginError');
   errEl.classList.add('hidden');
 
   if (!email || !pw) {
@@ -412,8 +411,8 @@ async function login() {
     return;
   }
 
-  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-  if (error) {
+  var result = await sb.auth.signInWithPassword({ email: email, password: pw });
+  if (result.error) {
     errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
     errEl.classList.remove('hidden');
   }
@@ -424,19 +423,22 @@ async function logout() {
 }
 
 function openPwModal() {
-  ['newPw','newPwConfirm'].forEach(id => document.getElementById(id).value = '');
-  ['pwError','pwSuccess'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById('newPw').value        = '';
+  document.getElementById('newPwConfirm').value = '';
+  document.getElementById('pwError').classList.add('hidden');
+  document.getElementById('pwSuccess').classList.add('hidden');
   document.getElementById('pwModal').classList.remove('hidden');
 }
+
 function closePwModal() {
   document.getElementById('pwModal').classList.add('hidden');
 }
 
 async function changePassword() {
-  const pw  = document.getElementById('newPw').value;
-  const pw2 = document.getElementById('newPwConfirm').value;
-  const errEl = document.getElementById('pwError');
-  const sucEl = document.getElementById('pwSuccess');
+  var pw     = document.getElementById('newPw').value;
+  var pw2    = document.getElementById('newPwConfirm').value;
+  var errEl  = document.getElementById('pwError');
+  var sucEl  = document.getElementById('pwSuccess');
   errEl.classList.add('hidden');
   sucEl.classList.add('hidden');
 
@@ -451,9 +453,9 @@ async function changePassword() {
     return;
   }
 
-  const { error } = await sb.auth.updateUser({ password: pw });
-  if (error) {
-    errEl.textContent = '변경 실패: ' + error.message;
+  var res = await sb.auth.updateUser({ password: pw });
+  if (res.error) {
+    errEl.textContent = '변경 실패: ' + res.error.message;
     errEl.classList.remove('hidden');
     return;
   }
@@ -462,8 +464,8 @@ async function changePassword() {
   setTimeout(closePwModal, 1500);
 }
 
-/* Auth 상태 감지 */
-sb.auth.onAuthStateChange(async (event, session) => {
+/* ── Auth 상태 감지 ── */
+sb.auth.onAuthStateChange(async function(event, session) {
   if (session) {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
@@ -476,113 +478,124 @@ sb.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-/* 데이터 로드 */
+/* ── 데이터 로드 ── */
 async function loadAll() {
   await Promise.all([loadItems(), loadTransactions()]);
 }
 
 async function loadItems() {
-  const { data, error } = await sb.from('items').select('*').order('name');
-  if (!error && data) {
-    items = data;
+  var res = await sb.from('items').select('*').order('name');
+  if (!res.error && res.data) {
+    items = res.data;
     renderStock();
-    renderInoutItems();
+    renderInoutItems('');
   }
 }
 
 async function loadTransactions() {
-  const { data, error } = await sb
+  var res = await sb
     .from('transactions')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(300);
-  if (!error && data) {
-    transactions = data;
+  if (!res.error && res.data) {
+    transactions = res.data;
     renderHistory();
   }
 }
 
-/* 탭 전환 */
+/* ── 탭 전환 ── */
 function showTab(name) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.tab-btn').forEach(el => {
+  document.querySelectorAll('.tab-content').forEach(function(el) {
+    el.classList.add('hidden');
+  });
+  document.querySelectorAll('.tab-btn').forEach(function(el) {
     el.classList.remove('tab-active');
-    el.style.borderBottomColor = '';
-    el.style.color = '';
   });
   document.getElementById('content-' + name).classList.remove('hidden');
   document.getElementById('tab-' + name).classList.add('tab-active');
 }
 
-/* 재고 현황 */
+/* ── 재고 현황 ── */
 function renderStock() {
-  const search      = (document.getElementById('stockSearch').value || '').toLowerCase();
-  const cat         = document.getElementById('stockCatFilter').value;
-  const statusFilt  = document.getElementById('stockStatusFilter').value;
+  var search     = (document.getElementById('stockSearch').value || '').toLowerCase();
+  var cat        = document.getElementById('stockCatFilter').value;
+  var statusFilt = document.getElementById('stockStatusFilter').value;
 
-  const filtered = items.filter(i => {
+  var filtered = items.filter(function(i) {
     if (search && !i.name.toLowerCase().includes(search)) return false;
     if (cat && i.category !== cat) return false;
     if (statusFilt === 'low' && i.current_stock > i.min_stock) return false;
     return true;
   });
 
-  const tbody = document.getElementById('stockTableBody');
+  var tbody = document.getElementById('stockTableBody');
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">등록된 소모품이 없습니다.</td></tr>';
   } else {
-    tbody.innerHTML = filtered.map(i => {
-      const s = i.current_stock === 0 ? 'empty' : i.current_stock <= i.min_stock ? 'low' : 'normal';
-      const label = { empty:'소진', low:'부족', normal:'정상' }[s];
-      const cls   = { empty:'badge-empty', low:'badge-low', normal:'badge-normal' }[s];
-      const qCls  = s === 'empty' ? 'text-red-600 font-bold' : s === 'low' ? 'text-yellow-600 font-semibold' : 'text-gray-900';
-      const safeId = escAttr(i.id);
-      const safeName = escAttr(i.name);
-      return '<tr class="border-b border-gray-100 hover:bg-gray-50">'
-        + '<td class="px-4 py-3 font-medium text-gray-900">' + escHtml(i.name) + '</td>'
-        + '<td class="px-4 py-3 text-gray-500 text-xs">' + escHtml(i.category) + '</td>'
-        + '<td class="px-4 py-3 text-gray-500 text-xs">' + escHtml(i.unit) + '</td>'
-        + '<td class="px-4 py-3 text-right ' + qCls + '">' + i.current_stock + '</td>'
-        + '<td class="px-4 py-3 text-right text-gray-500">' + i.min_stock + '</td>'
-        + '<td class="px-4 py-3 text-center"><span class="text-xs px-2 py-0.5 rounded ' + cls + '">' + label + '</span></td>'
-        + '<td class="px-4 py-3 text-center"><button onclick="openDeleteModal(' + "'" + safeId + "','" + safeName + "')"
-        + ' class="text-xs text-red-400 hover:text-red-600 hover:underline">삭제</button></td>'
-        + '</tr>';
+    tbody.innerHTML = filtered.map(function(i) {
+      var s     = i.current_stock === 0 ? 'empty' : i.current_stock <= i.min_stock ? 'low' : 'normal';
+      var label = { empty:'소진', low:'부족', normal:'정상' }[s];
+      var cls   = { empty:'badge-empty', low:'badge-low', normal:'badge-normal' }[s];
+      var qCls  = s === 'empty' ? 'text-red-600 font-bold' : s === 'low' ? 'text-yellow-600 font-semibold' : 'text-gray-900';
+      return [
+        '<tr class="border-b border-gray-100 hover:bg-gray-50">',
+        '<td class="px-4 py-3 font-medium text-gray-900">' + escHtml(i.name) + '</td>',
+        '<td class="px-4 py-3 text-gray-500 text-xs">' + escHtml(i.category || '') + '</td>',
+        '<td class="px-4 py-3 text-gray-500 text-xs">' + escHtml(i.unit || '') + '</td>',
+        '<td class="px-4 py-3 text-right ' + qCls + '">' + i.current_stock + '</td>',
+        '<td class="px-4 py-3 text-right text-gray-500">' + i.min_stock + '</td>',
+        '<td class="px-4 py-3 text-center"><span class="text-xs px-2 py-0.5 rounded ' + cls + '">' + label + '</span></td>',
+        '<td class="px-4 py-3 text-center">',
+        '<button onclick="openDeleteModal(this)" data-id="' + escHtml(i.id) + '" data-name="' + escHtml(i.name) + '"',
+        ' class="text-xs text-red-400 hover:text-red-600 hover:underline">삭제</button>',
+        '</td></tr>'
+      ].join('');
     }).join('');
   }
 
-  const total = items.length;
-  const low   = items.filter(i => i.current_stock > 0 && i.current_stock <= i.min_stock).length;
-  const empty = items.filter(i => i.current_stock === 0).length;
-  document.getElementById('stockSummary').innerHTML =
-    '<div class="bg-white border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-400">전체 품목</p><p class="text-2xl font-bold text-gray-900 mt-0.5">' + total + '</p></div>'
-    + '<div class="bg-white border border-yellow-200 rounded-lg p-3"><p class="text-xs text-yellow-600">재고 부족</p><p class="text-2xl font-bold text-yellow-500 mt-0.5">' + low + '</p></div>'
-    + '<div class="bg-white border border-red-200 rounded-lg p-3"><p class="text-xs text-red-500">재고 소진</p><p class="text-2xl font-bold text-red-500 mt-0.5">' + empty + '</p></div>';
+  var total = items.length;
+  var low   = items.filter(function(i) { return i.current_stock > 0 && i.current_stock <= i.min_stock; }).length;
+  var empty = items.filter(function(i) { return i.current_stock === 0; }).length;
+  document.getElementById('stockSummary').innerHTML = [
+    '<div class="bg-white border border-gray-200 rounded-lg p-3">',
+    '<p class="text-xs text-gray-400">전체 품목</p>',
+    '<p class="text-2xl font-bold text-gray-900 mt-0.5">' + total + '</p></div>',
+    '<div class="bg-white border border-yellow-200 rounded-lg p-3">',
+    '<p class="text-xs text-yellow-600">재고 부족</p>',
+    '<p class="text-2xl font-bold text-yellow-500 mt-0.5">' + low + '</p></div>',
+    '<div class="bg-white border border-red-200 rounded-lg p-3">',
+    '<p class="text-xs text-red-500">재고 소진</p>',
+    '<p class="text-2xl font-bold text-red-500 mt-0.5">' + empty + '</p></div>'
+  ].join('');
 }
 
+/* ── 중복 방지 ── */
 function normalizeName(name) {
   return name.replace(/\s+/g, '').toLowerCase();
 }
 
 function onRegNameInput() {
-  const name = document.getElementById('regName').value.trim();
-  const warnEl    = document.getElementById('dupWarning');
-  const dupTextEl = document.getElementById('dupItemText');
-
+  var name   = document.getElementById('regName').value.trim();
+  var warnEl = document.getElementById('dupWarning');
+  var dupEl  = document.getElementById('dupItemText');
   if (!name) { warnEl.classList.add('hidden'); return; }
 
-  const norm  = normalizeName(name);
-  const found = items.find(i => normalizeName(i.name) === norm);
+  var norm  = normalizeName(name);
+  var found = null;
+  for (var i = 0; i < items.length; i++) {
+    if (normalizeName(items[i].name) === norm) { found = items[i]; break; }
+  }
 
   if (found) {
-    dupTextEl.textContent = '이미 등록된 품목: "' + found.name + '" (현재고: ' + found.current_stock + ' ' + found.unit + ')';
+    dupEl.textContent = '→ 이미 등록된 품목: "' + found.name + '"  (현재고: ' + found.current_stock + ' ' + found.unit + ')';
     warnEl.classList.remove('hidden');
   } else {
     warnEl.classList.add('hidden');
   }
 }
 
-/* 소모품 등록 */
+/* ── 소모품 등록 ── */
 function toggleCustomCat() {
   isCustomCat = !isCustomCat;
   document.getElementById('regCategory').classList.toggle('hidden', isCustomCat);
@@ -591,9 +604,9 @@ function toggleCustomCat() {
 }
 
 async function registerItem() {
-  const name = document.getElementById('regName').value.trim();
-  const errEl = document.getElementById('regError');
-  const sucEl = document.getElementById('regSuccess');
+  var name  = document.getElementById('regName').value.trim();
+  var errEl = document.getElementById('regError');
+  var sucEl = document.getElementById('regSuccess');
   errEl.classList.add('hidden');
   sucEl.classList.add('hidden');
 
@@ -603,37 +616,40 @@ async function registerItem() {
     return;
   }
 
-  const norm = normalizeName(name);
-  const dup  = items.find(i => normalizeName(i.name) === norm);
+  var norm = normalizeName(name);
+  var dup  = null;
+  for (var i = 0; i < items.length; i++) {
+    if (normalizeName(items[i].name) === norm) { dup = items[i]; break; }
+  }
   if (dup) {
-    errEl.textContent = '"' + dup.name + '" 과(와) 동일한 품목입니다. 이미 등록된 품목의 입출고는 [입출고] 탭을 이용해주세요.';
+    errEl.textContent = '"'+ dup.name +'"과(와) 동일한 품목입니다. [입출고] 탭을 이용해주세요.';
     errEl.classList.remove('hidden');
     return;
   }
 
-  const category  = isCustomCat
+  var category = isCustomCat
     ? (document.getElementById('regCategoryCustom').value.trim() || '기타')
     : document.getElementById('regCategory').value;
-  const unitCustom = document.getElementById('regUnitCustom').value.trim();
-  const unit       = unitCustom || document.getElementById('regUnit').value;
-  const stock      = parseInt(document.getElementById('regStock').value)    || 0;
-  const minStock   = parseInt(document.getElementById('regMinStock').value) || 1;
-  const note       = document.getElementById('regNote').value.trim();
+  var unitCustom = document.getElementById('regUnitCustom').value.trim();
+  var unit       = unitCustom || document.getElementById('regUnit').value;
+  var stock      = parseInt(document.getElementById('regStock').value)    || 0;
+  var minStock   = parseInt(document.getElementById('regMinStock').value) || 1;
+  var note       = document.getElementById('regNote').value.trim();
 
-  const { data: inserted, error } = await sb.from('items')
-    .insert({ name, category, unit, current_stock: stock, min_stock: minStock, note })
+  var res = await sb.from('items')
+    .insert({ name: name, category: category, unit: unit, current_stock: stock, min_stock: minStock, note: note })
     .select()
     .single();
 
-  if (error) {
-    errEl.textContent = '등록 실패: ' + error.message;
+  if (res.error) {
+    errEl.textContent = '등록 실패: ' + res.error.message;
     errEl.classList.remove('hidden');
     return;
   }
 
-  if (stock > 0 && inserted) {
+  if (stock > 0 && res.data) {
     await sb.from('transactions').insert({
-      item_id: inserted.id, item_name: name,
+      item_id: res.data.id, item_name: name,
       type: 'in', quantity: stock, stock_after: stock,
       handler: '시스템', note: '초기 재고 등록'
     });
@@ -641,22 +657,20 @@ async function registerItem() {
 
   sucEl.textContent = '"' + name + '" 등록 완료!';
   sucEl.classList.remove('hidden');
-
   document.getElementById('regName').value     = '';
   document.getElementById('regStock').value    = '0';
   document.getElementById('regMinStock').value = '5';
   document.getElementById('regNote').value     = '';
   document.getElementById('dupWarning').classList.add('hidden');
-
   await loadAll();
-  setTimeout(() => sucEl.classList.add('hidden'), 3000);
+  setTimeout(function() { sucEl.classList.add('hidden'); }, 3000);
 }
 
-/* 입출고 */
+/* ── 입출고 ── */
 function setType(type) {
   currentType = type;
-  const inBtn  = document.getElementById('typeInBtn');
-  const outBtn = document.getElementById('typeOutBtn');
+  var inBtn  = document.getElementById('typeInBtn');
+  var outBtn = document.getElementById('typeOutBtn');
   if (type === 'in') {
     inBtn.className  = 'flex-1 py-2 rounded-lg text-sm font-medium border-2 border-blue-600 bg-blue-600 text-white transition';
     outBtn.className = 'flex-1 py-2 rounded-lg text-sm font-medium border-2 border-gray-300 text-gray-600 hover:border-gray-400 transition';
@@ -667,12 +681,12 @@ function setType(type) {
 }
 
 function renderInoutItems(q) {
-  const sel      = document.getElementById('inoutItem');
-  const query    = (q || '').toLowerCase();
-  const filtered = items.filter(i => !query || i.name.toLowerCase().includes(query));
-  sel.innerHTML  = filtered.map(i =>
-    '<option value="' + i.id + '">' + escHtml(i.name) + '  [현재고: ' + i.current_stock + ' ' + escHtml(i.unit) + ']</option>'
-  ).join('');
+  var sel      = document.getElementById('inoutItem');
+  var query    = (q || '').toLowerCase();
+  var filtered = items.filter(function(i) { return !query || i.name.toLowerCase().includes(query); });
+  sel.innerHTML = filtered.map(function(i) {
+    return '<option value="' + escHtml(i.id) + '">' + escHtml(i.name) + '  [현재고: ' + i.current_stock + ' ' + escHtml(i.unit) + ']</option>';
+  }).join('');
   updateCurrentStock();
 }
 
@@ -681,26 +695,31 @@ function filterInoutItems() {
 }
 
 function updateCurrentStock() {
-  const id   = document.getElementById('inoutItem').value;
-  const item = items.find(i => i.id === id);
-  document.getElementById('currentStockDisplay').textContent =
-    item ? (item.current_stock + ' ' + item.unit) : '-';
+  var id   = document.getElementById('inoutItem').value;
+  var item = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === id) { item = items[i]; break; }
+  }
+  document.getElementById('currentStockDisplay').textContent = item ? (item.current_stock + ' ' + item.unit) : '-';
 }
 
 async function submitInout() {
-  const itemId  = document.getElementById('inoutItem').value;
-  const qty     = parseInt(document.getElementById('inoutQty').value) || 0;
-  const handler = document.getElementById('inoutHandler').value.trim();
-  const note    = document.getElementById('inoutNote').value.trim();
-  const errEl   = document.getElementById('inoutError');
-  const sucEl   = document.getElementById('inoutSuccess');
+  var itemId  = document.getElementById('inoutItem').value;
+  var qty     = parseInt(document.getElementById('inoutQty').value) || 0;
+  var handler = document.getElementById('inoutHandler').value.trim();
+  var note    = document.getElementById('inoutNote').value.trim();
+  var errEl   = document.getElementById('inoutError');
+  var sucEl   = document.getElementById('inoutSuccess');
   errEl.classList.add('hidden');
   sucEl.classList.add('hidden');
 
   if (!itemId) { errEl.textContent = '품목을 선택해주세요.'; errEl.classList.remove('hidden'); return; }
   if (qty <= 0) { errEl.textContent = '수량은 1 이상이어야 합니다.'; errEl.classList.remove('hidden'); return; }
 
-  const item = items.find(i => i.id === itemId);
+  var item = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === itemId) { item = items[i]; break; }
+  }
   if (!item) return;
 
   if (currentType === 'out' && item.current_stock < qty) {
@@ -709,15 +728,14 @@ async function submitInout() {
     return;
   }
 
-  const newStock = currentType === 'in' ? item.current_stock + qty : item.current_stock - qty;
+  var newStock = currentType === 'in' ? item.current_stock + qty : item.current_stock - qty;
 
-  const { error: upErr } = await sb
-    .from('items')
+  var upRes = await sb.from('items')
     .update({ current_stock: newStock, updated_at: new Date().toISOString() })
     .eq('id', itemId);
 
-  if (upErr) {
-    errEl.textContent = '업데이트 실패: ' + upErr.message;
+  if (upRes.error) {
+    errEl.textContent = '업데이트 실패: ' + upRes.error.message;
     errEl.classList.remove('hidden');
     return;
   }
@@ -728,66 +746,66 @@ async function submitInout() {
     handler: handler || '-', note: note || '-'
   });
 
-  const typeLabel = currentType === 'in' ? '입고' : '출고';
-  sucEl.textContent = typeLabel + ' 완료! ' + item.name + ': ' + item.current_stock + ' -> ' + newStock + ' ' + item.unit;
+  var typeLabel = currentType === 'in' ? '입고' : '출고';
+  sucEl.textContent = typeLabel + ' 완료! ' + item.name + ': ' + item.current_stock + ' → ' + newStock + ' ' + item.unit;
   sucEl.classList.remove('hidden');
-
   document.getElementById('inoutQty').value     = '1';
   document.getElementById('inoutHandler').value = '';
   document.getElementById('inoutNote').value    = '';
   await loadAll();
-  setTimeout(() => sucEl.classList.add('hidden'), 4000);
+  setTimeout(function() { sucEl.classList.add('hidden'); }, 4000);
 }
 
-/* 거래 내역 */
+/* ── 거래 내역 ── */
 function renderHistory() {
-  const search    = (document.getElementById('histSearch').value || '').toLowerCase();
-  const typeFilt  = document.getElementById('histTypeFilter').value;
+  var search   = (document.getElementById('histSearch').value || '').toLowerCase();
+  var typeFilt = document.getElementById('histTypeFilter').value;
 
-  const filtered = transactions.filter(t => {
+  var filtered = transactions.filter(function(t) {
     if (search && !t.item_name.toLowerCase().includes(search)) return false;
     if (typeFilt && t.type !== typeFilt) return false;
     return true;
   });
 
-  const tbody = document.getElementById('histTableBody');
+  var tbody = document.getElementById('histTableBody');
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">거래 내역이 없습니다.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = filtered.map(t => {
-    const dateVal = t.created_at || t.date || '';
-    const d  = new Date(dateVal);
-    const ds = dateVal
-      ? (d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()))
-      : '-';
-    const typeLabel = t.type === 'in' ? '입고' : '출고';
-    const typeCls   = t.type === 'in' ? 'text-blue-600 bg-blue-50' : 'text-red-600 bg-red-50';
-    const qCls      = t.type === 'in' ? 'text-blue-600' : 'text-red-500';
-    const qPrefix   = t.type === 'in' ? '+' : '-';
-    return '<tr class="border-b border-gray-100 hover:bg-gray-50">'
-      + '<td class="px-4 py-2.5 text-xs text-gray-400 whitespace-nowrap">' + ds + '</td>'
-      + '<td class="px-4 py-2.5 text-sm font-medium text-gray-900">' + escHtml(t.item_name) + '</td>'
-      + '<td class="px-4 py-2.5 text-center"><span class="text-xs px-2 py-0.5 rounded ' + typeCls + '">' + typeLabel + '</span></td>'
-      + '<td class="px-4 py-2.5 text-right font-medium ' + qCls + '">' + qPrefix + t.quantity + '</td>'
-      + '<td class="px-4 py-2.5 text-right text-gray-700">' + t.stock_after + '</td>'
-      + '<td class="px-4 py-2.5 text-sm text-gray-500">' + escHtml(t.handler || '-') + '</td>'
-      + '<td class="px-4 py-2.5 text-sm text-gray-400">' + escHtml(t.note || '-') + '</td>'
-      + '</tr>';
+  tbody.innerHTML = filtered.map(function(t) {
+    var d  = new Date(t.created_at || t.date);
+    var ds = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    var typeLabel = t.type === 'in' ? '입고' : '출고';
+    var typeCls   = t.type === 'in' ? 'text-blue-600 bg-blue-50' : 'text-red-600 bg-red-50';
+    var qCls      = t.type === 'in' ? 'text-blue-600' : 'text-red-500';
+    var qPrefix   = t.type === 'in' ? '+' : '-';
+    return [
+      '<tr class="border-b border-gray-100 hover:bg-gray-50">',
+      '<td class="px-4 py-2.5 text-xs text-gray-400 whitespace-nowrap">' + ds + '</td>',
+      '<td class="px-4 py-2.5 text-sm font-medium text-gray-900">' + escHtml(t.item_name) + '</td>',
+      '<td class="px-4 py-2.5 text-center"><span class="text-xs px-2 py-0.5 rounded ' + typeCls + '">' + typeLabel + '</span></td>',
+      '<td class="px-4 py-2.5 text-right font-medium ' + qCls + '">' + qPrefix + t.quantity + '</td>',
+      '<td class="px-4 py-2.5 text-right text-gray-700">' + t.stock_after + '</td>',
+      '<td class="px-4 py-2.5 text-sm text-gray-500">' + escHtml(t.handler || '-') + '</td>',
+      '<td class="px-4 py-2.5 text-sm text-gray-400">' + escHtml(t.note || '-') + '</td>',
+      '</tr>'
+    ].join('');
   }).join('');
 }
 
-/* 삭제 */
-function openDeleteModal(id, name) {
-  deleteTargetId = id;
-  document.getElementById('deleteItemLabel').textContent = '"' + name + '" 을(를) 삭제하시겠습니까?';
+/* ── 삭제 ── */
+function openDeleteModal(btn) {
+  deleteTargetId = btn.dataset.id;
+  document.getElementById('deleteItemLabel').textContent = '"' + btn.dataset.name + '" 을(를) 삭제하시겠습니까?';
   document.getElementById('deleteModal').classList.remove('hidden');
 }
+
 function closeDeleteModal() {
   deleteTargetId = null;
   document.getElementById('deleteModal').classList.add('hidden');
 }
+
 async function confirmDelete() {
   if (!deleteTargetId) return;
   await sb.from('transactions').delete().eq('item_id', deleteTargetId);
@@ -796,16 +814,19 @@ async function confirmDelete() {
   await loadAll();
 }
 
-/* 유틸 */
+/* ── 유틸 ── */
 function escHtml(s) {
   return String(s == null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
-function escAttr(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+
+function pad(n) {
+  return String(n).padStart(2, '0');
 }
-function pad(n) { return String(n).padStart(2, '0'); }
-</script>
+<\/script>
 </body>
 </html>
