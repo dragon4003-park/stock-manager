@@ -165,7 +165,7 @@
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">품명 <span class="text-red-500">*</span></label>
-            <input id="regName" type="text" placeholder="예: TLC 플레이트 (Silica, 10×10 cm)"
+            <input id="regName" type="text" placeholder="예: TLC 플레이트 (Silica, 10x10 cm)"
                    oninput="onRegNameInput()"
                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <div id="dupWarning" class="hidden mt-2 dup-warning">
@@ -386,16 +386,31 @@
 
 <script>
 /* ── Supabase 초기화 ── */
-var SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
-var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ── 전역 상태 ── */
-var items = [];
-var transactions = [];
-var currentType = 'in';
+var items          = [];
+var transactions   = [];
+var currentType    = 'in';
 var deleteTargetId = null;
-var isCustomCat = false;
+var isCustomCat    = false;
+
+/* ── 화면 전환 헬퍼 ── */
+function showLogin() {
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPw').value    = '';
+  document.getElementById('loginError').classList.add('hidden');
+}
+
+function showApp(email) {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('userEmail').textContent = email || '';
+}
 
 /* ── 인증 ── */
 async function login() {
@@ -417,20 +432,20 @@ async function login() {
   }
 }
 
-/* ── 로그아웃 (화면 전환 직접 처리) ── */
 async function logout() {
-  await sb.auth.signOut();
-  document.getElementById('mainApp').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('loginEmail').value = '';
-  document.getElementById('loginPw').value = '';
-  document.getElementById('loginError').classList.add('hidden');
-  items = [];
+  try {
+    await sb.auth.signOut();
+  } catch(e) {
+    console.log('signOut error:', e);
+  }
+  /* 응답 여부와 관계없이 무조건 로그인 화면으로 전환 */
+  items        = [];
   transactions = [];
+  showLogin();
 }
 
 function openPwModal() {
-  document.getElementById('newPw').value = '';
+  document.getElementById('newPw').value        = '';
   document.getElementById('newPwConfirm').value = '';
   document.getElementById('pwError').classList.add('hidden');
   document.getElementById('pwSuccess').classList.add('hidden');
@@ -441,8 +456,8 @@ function closePwModal() {
 }
 
 async function changePassword() {
-  var pw  = document.getElementById('newPw').value;
-  var pw2 = document.getElementById('newPwConfirm').value;
+  var pw    = document.getElementById('newPw').value;
+  var pw2   = document.getElementById('newPwConfirm').value;
   var errEl = document.getElementById('pwError');
   var sucEl = document.getElementById('pwSuccess');
   errEl.classList.add('hidden');
@@ -471,16 +486,13 @@ async function changePassword() {
 }
 
 /* ── Auth 상태 감지 ── */
-sb.auth.onAuthStateChange(async function(event, session) {
-  if (session) {
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
-    document.getElementById('userEmail').textContent = session.user.email;
-    await loadAll();
+sb.auth.onAuthStateChange(function(event, session) {
+  if (session && session.user) {
+    showApp(session.user.email);
+    loadAll();
     showTab('stock');
   } else {
-    document.getElementById('loginScreen').classList.remove('hidden');
-    document.getElementById('mainApp').classList.add('hidden');
+    showLogin();
   }
 });
 
@@ -539,47 +551,37 @@ function renderStock() {
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">등록된 소모품이 없습니다.</td></tr>';
   } else {
-    var rows = filtered.map(function(i) {
-      var s = i.current_stock === 0 ? 'empty' : i.current_stock <= i.min_stock ? 'low' : 'normal';
+    tbody.innerHTML = filtered.map(function(i) {
+      var s     = i.current_stock === 0 ? 'empty' : i.current_stock <= i.min_stock ? 'low' : 'normal';
       var label = { empty:'소진', low:'부족', normal:'정상' }[s];
       var cls   = { empty:'badge-empty', low:'badge-low', normal:'badge-normal' }[s];
       var qCls  = s === 'empty' ? 'text-red-600 font-bold' : s === 'low' ? 'text-yellow-600 font-semibold' : 'text-gray-900';
-      return [
-        '<tr class="border-b border-gray-100 hover:bg-gray-50" data-id="' + escAttr(i.id) + '" data-name="' + escAttr(i.name) + '">',
-        '<td class="px-4 py-3 font-medium text-gray-900">' + escHtml(i.name) + '</td>',
-        '<td class="px-4 py-3 text-gray-500 text-xs">' + escHtml(i.category) + '</td>',
-        '<td class="px-4 py-3 text-gray-500 text-xs">' + escHtml(i.unit) + '</td>',
-        '<td class="px-4 py-3 text-right ' + qCls + '">' + i.current_stock + '</td>',
-        '<td class="px-4 py-3 text-right text-gray-500">' + i.min_stock + '</td>',
-        '<td class="px-4 py-3 text-center"><span class="text-xs px-2 py-0.5 rounded ' + cls + '">' + label + '</span></td>',
-        '<td class="px-4 py-3 text-center"><button class="del-btn text-xs text-red-400 hover:text-red-600 hover:underline">삭제</button></td>',
-        '</tr>'
-      ].join('');
-    });
-    tbody.innerHTML = rows.join('');
-
-    tbody.querySelectorAll('.del-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var tr = btn.closest('tr');
-        openDeleteModal(tr.dataset.id, tr.dataset.name);
-      });
-    });
+      return '<tr class="border-b border-gray-100 hover:bg-gray-50">'
+        + '<td class="px-4 py-3 font-medium text-gray-900">' + escHtml(i.name) + '</td>'
+        + '<td class="px-4 py-3 text-gray-500 text-xs">'     + escHtml(i.category) + '</td>'
+        + '<td class="px-4 py-3 text-gray-500 text-xs">'     + escHtml(i.unit) + '</td>'
+        + '<td class="px-4 py-3 text-right ' + qCls + '">'   + i.current_stock + '</td>'
+        + '<td class="px-4 py-3 text-right text-gray-500">'  + i.min_stock + '</td>'
+        + '<td class="px-4 py-3 text-center"><span class="text-xs px-2 py-0.5 rounded ' + cls + '">' + label + '</span></td>'
+        + '<td class="px-4 py-3 text-center">'
+        + '<button data-id="' + escHtml(i.id) + '" data-name="' + escHtml(i.name) + '" onclick="openDeleteModal(this.dataset.id, this.dataset.name)" class="text-xs text-red-400 hover:text-red-600 hover:underline">삭제</button>'
+        + '</td></tr>';
+    }).join('');
   }
 
   var total = items.length;
   var low   = items.filter(function(i) { return i.current_stock > 0 && i.current_stock <= i.min_stock; }).length;
   var empty = items.filter(function(i) { return i.current_stock === 0; }).length;
-  document.getElementById('stockSummary').innerHTML = [
-    '<div class="bg-white border border-gray-200 rounded-lg p-3">',
-    '<p class="text-xs text-gray-400">전체 품목</p>',
-    '<p class="text-2xl font-bold text-gray-900 mt-0.5">' + total + '</p></div>',
-    '<div class="bg-white border border-yellow-200 rounded-lg p-3">',
-    '<p class="text-xs text-yellow-600">재고 부족</p>',
-    '<p class="text-2xl font-bold text-yellow-500 mt-0.5">' + low + '</p></div>',
-    '<div class="bg-white border border-red-200 rounded-lg p-3">',
-    '<p class="text-xs text-red-500">재고 소진</p>',
-    '<p class="text-2xl font-bold text-red-500 mt-0.5">' + empty + '</p></div>'
-  ].join('');
+  document.getElementById('stockSummary').innerHTML =
+    '<div class="bg-white border border-gray-200 rounded-lg p-3">'
+    + '<p class="text-xs text-gray-400">전체 품목</p>'
+    + '<p class="text-2xl font-bold text-gray-900 mt-0.5">' + total + '</p></div>'
+    + '<div class="bg-white border border-yellow-200 rounded-lg p-3">'
+    + '<p class="text-xs text-yellow-600">재고 부족</p>'
+    + '<p class="text-2xl font-bold text-yellow-500 mt-0.5">' + low + '</p></div>'
+    + '<div class="bg-white border border-red-200 rounded-lg p-3">'
+    + '<p class="text-xs text-red-500">재고 소진</p>'
+    + '<p class="text-2xl font-bold text-red-500 mt-0.5">' + empty + '</p></div>';
 }
 
 /* ── 중복 검사 ── */
@@ -588,14 +590,17 @@ function normalizeName(name) {
 }
 
 function onRegNameInput() {
-  var name = document.getElementById('regName').value.trim();
-  var warnEl    = document.getElementById('dupWarning');
-  var dupTextEl = document.getElementById('dupItemText');
+  var name    = document.getElementById('regName').value.trim();
+  var warnEl  = document.getElementById('dupWarning');
+  var textEl  = document.getElementById('dupItemText');
   if (!name) { warnEl.classList.add('hidden'); return; }
   var norm  = normalizeName(name);
-  var found = items.find(function(i) { return normalizeName(i.name) === norm; });
+  var found = null;
+  for (var i = 0; i < items.length; i++) {
+    if (normalizeName(items[i].name) === norm) { found = items[i]; break; }
+  }
   if (found) {
-    dupTextEl.textContent = '→ 이미 등록된 품목: "' + found.name + '"  (현재고: ' + found.current_stock + ' ' + found.unit + ')';
+    textEl.textContent = '이미 등록된 품목: "' + found.name + '"  (현재고: ' + found.current_stock + ' ' + found.unit + ')';
     warnEl.classList.remove('hidden');
   } else {
     warnEl.classList.add('hidden');
@@ -624,14 +629,17 @@ async function registerItem() {
   }
 
   var norm = normalizeName(name);
-  var dup  = items.find(function(i) { return normalizeName(i.name) === norm; });
+  var dup  = null;
+  for (var i = 0; i < items.length; i++) {
+    if (normalizeName(items[i].name) === norm) { dup = items[i]; break; }
+  }
   if (dup) {
-    errEl.textContent = '"' + dup.name + '" 과(와) 동일한 품목입니다. [입출고] 탭을 이용해주세요.';
+    errEl.textContent = '"' + dup.name + '" 과(와) 동일한 품목입니다. 입출고는 [입출고] 탭을 이용해주세요.';
     errEl.classList.remove('hidden');
     return;
   }
 
-  var category = isCustomCat
+  var category   = isCustomCat
     ? (document.getElementById('regCategoryCustom').value.trim() || '기타')
     : document.getElementById('regCategory').value;
   var unitCustom = document.getElementById('regUnitCustom').value.trim();
@@ -640,20 +648,20 @@ async function registerItem() {
   var minStock   = parseInt(document.getElementById('regMinStock').value) || 1;
   var note       = document.getElementById('regNote').value.trim();
 
-  var insertResult = await sb.from('items')
+  var ins = await sb.from('items')
     .insert({ name: name, category: category, unit: unit, current_stock: stock, min_stock: minStock, note: note })
     .select()
     .single();
 
-  if (insertResult.error) {
-    errEl.textContent = '등록 실패: ' + insertResult.error.message;
+  if (ins.error) {
+    errEl.textContent = '등록 실패: ' + ins.error.message;
     errEl.classList.remove('hidden');
     return;
   }
 
-  if (stock > 0 && insertResult.data) {
+  if (stock > 0 && ins.data) {
     await sb.from('transactions').insert({
-      item_id: insertResult.data.id, item_name: name,
+      item_id: ins.data.id, item_name: name,
       type: 'in', quantity: stock, stock_after: stock,
       handler: '시스템', note: '초기 재고 등록'
     });
@@ -689,7 +697,7 @@ function renderInoutItems(q) {
   var query    = (q || '').toLowerCase();
   var filtered = items.filter(function(i) { return !query || i.name.toLowerCase().includes(query); });
   sel.innerHTML = filtered.map(function(i) {
-    return '<option value="' + escAttr(i.id) + '">' + escHtml(i.name) + '  [현재고: ' + i.current_stock + ' ' + escHtml(i.unit) + ']</option>';
+    return '<option value="' + escHtml(i.id) + '">' + escHtml(i.name) + '  [현재고: ' + i.current_stock + ' ' + escHtml(i.unit) + ']</option>';
   }).join('');
   updateCurrentStock();
 }
@@ -700,9 +708,11 @@ function filterInoutItems() {
 
 function updateCurrentStock() {
   var id   = document.getElementById('inoutItem').value;
-  var item = items.find(function(i) { return i.id === id; });
-  document.getElementById('currentStockDisplay').textContent =
-    item ? (item.current_stock + ' ' + item.unit) : '-';
+  var item = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === id) { item = items[i]; break; }
+  }
+  document.getElementById('currentStockDisplay').textContent = item ? (item.current_stock + ' ' + item.unit) : '-';
 }
 
 async function submitInout() {
@@ -718,7 +728,10 @@ async function submitInout() {
   if (!itemId) { errEl.textContent = '품목을 선택해주세요.'; errEl.classList.remove('hidden'); return; }
   if (qty <= 0) { errEl.textContent = '수량은 1 이상이어야 합니다.'; errEl.classList.remove('hidden'); return; }
 
-  var item = items.find(function(i) { return i.id === itemId; });
+  var item = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === itemId) { item = items[i]; break; }
+  }
   if (!item) return;
 
   if (currentType === 'out' && item.current_stock < qty) {
@@ -729,8 +742,7 @@ async function submitInout() {
 
   var newStock = currentType === 'in' ? item.current_stock + qty : item.current_stock - qty;
 
-  var upResult = await sb
-    .from('items')
+  var upResult = await sb.from('items')
     .update({ current_stock: newStock, updated_at: new Date().toISOString() })
     .eq('id', itemId);
 
@@ -762,7 +774,7 @@ function renderHistory() {
   var typeFilt = document.getElementById('histTypeFilter').value;
 
   var filtered = transactions.filter(function(t) {
-    if (search && !t.item_name.toLowerCase().includes(search)) return false;
+    if (search && !(t.item_name || '').toLowerCase().includes(search)) return false;
     if (typeFilt && t.type !== typeFilt) return false;
     return true;
   });
@@ -774,24 +786,26 @@ function renderHistory() {
   }
 
   tbody.innerHTML = filtered.map(function(t) {
-    var dateStr = t.created_at || t.date || '';
-    var d  = new Date(dateStr);
-    var ds = isNaN(d) ? '-' : (d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()));
+    var raw = t.created_at || t.date || '';
+    var ds  = '';
+    if (raw) {
+      var d = new Date(raw);
+      ds = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+         + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
     var typeLabel = t.type === 'in' ? '입고' : '출고';
     var typeCls   = t.type === 'in' ? 'text-blue-600 bg-blue-50' : 'text-red-600 bg-red-50';
     var qCls      = t.type === 'in' ? 'text-blue-600' : 'text-red-500';
     var qPrefix   = t.type === 'in' ? '+' : '-';
-    return [
-      '<tr class="border-b border-gray-100 hover:bg-gray-50">',
-      '<td class="px-4 py-2.5 text-xs text-gray-400 whitespace-nowrap">' + ds + '</td>',
-      '<td class="px-4 py-2.5 text-sm font-medium text-gray-900">' + escHtml(t.item_name) + '</td>',
-      '<td class="px-4 py-2.5 text-center"><span class="text-xs px-2 py-0.5 rounded ' + typeCls + '">' + typeLabel + '</span></td>',
-      '<td class="px-4 py-2.5 text-right font-medium ' + qCls + '">' + qPrefix + t.quantity + '</td>',
-      '<td class="px-4 py-2.5 text-right text-gray-700">' + t.stock_after + '</td>',
-      '<td class="px-4 py-2.5 text-sm text-gray-500">' + escHtml(t.handler || '-') + '</td>',
-      '<td class="px-4 py-2.5 text-sm text-gray-400">' + escHtml(t.note || '-') + '</td>',
-      '</tr>'
-    ].join('');
+    return '<tr class="border-b border-gray-100 hover:bg-gray-50">'
+      + '<td class="px-4 py-2.5 text-xs text-gray-400 whitespace-nowrap">' + ds + '</td>'
+      + '<td class="px-4 py-2.5 text-sm font-medium text-gray-900">' + escHtml(t.item_name) + '</td>'
+      + '<td class="px-4 py-2.5 text-center"><span class="text-xs px-2 py-0.5 rounded ' + typeCls + '">' + typeLabel + '</span></td>'
+      + '<td class="px-4 py-2.5 text-right font-medium ' + qCls + '">' + qPrefix + t.quantity + '</td>'
+      + '<td class="px-4 py-2.5 text-right text-gray-700">' + t.stock_after + '</td>'
+      + '<td class="px-4 py-2.5 text-sm text-gray-500">' + escHtml(t.handler || '-') + '</td>'
+      + '<td class="px-4 py-2.5 text-sm text-gray-400">' + escHtml(t.note || '-') + '</td>'
+      + '</tr>';
   }).join('');
 }
 
@@ -816,10 +830,10 @@ async function confirmDelete() {
 /* ── 유틸 ── */
 function escHtml(s) {
   return String(s == null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function escAttr(s) {
-  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
 }
 function pad(n) { return String(n).padStart(2, '0'); }
 </script>
