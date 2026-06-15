@@ -7,7 +7,7 @@
  *  - CDN (Tailwind, Supabase SDK): Stale-While-Revalidate
  */
 
-const CACHE_VER  = 'v2.0';
+const CACHE_VER  = 'v2.1';
 const CACHE_NAME = 'consumable-mgr-' + CACHE_VER;
 
 const STATIC_FILES = [
