@@ -376,7 +376,7 @@
 <script>
 /* ── Supabase 초기화 ── */
 const SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-// ⚠️ 주의: 상성님께서 로그인이 정상 작동하셨던 본인의 실제 아주 긴 'eyJ...' 형태의 키 값으로 이곳을 유지해 주세요!
+// ⚠️ 주의: 상성님의 실제 작동하는 'eyJ...' 형태의 원본 키 값을 여기에 유지해 주세요!
 const SUPABASE_KEY = 'sb_publishable_MprppdoI1yJmFQcoSCvF9g_Q76n5xH2';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -501,11 +501,10 @@ async function loadItems() {
 }
 
 async function loadTransactions() {
-  // Supabase v2 문법 기준에 맞추어 { ascending: false } 옵션을 올바르게 지정하여 400 에러를 해결했습니다.
+  // 존재하지 않는 created_at 정렬 구문을 완전히 빼서 데이터 로드 에러(400)를 해결했습니다.
   var result = await sb
     .from('transactions')
     .select('*')
-    .order('created_at', { ascending: false })
     .limit(300);
     
   if (!result.error && result.data) {
@@ -780,10 +779,10 @@ function renderHistory() {
   }
 
   tbody.innerHTML = filtered.map(function(t) {
-    // 날짜 변환 시 뻗지 않도록 예외 처리 보완
-    var ds = '';
+    // 날짜 컬럼 부재 이슈 우회를 위한 안전 코드 고도화
+    var ds = '-';
     try {
-      var raw = t.created_at || t.date;
+      var raw = t.created_at || t.date || t.created_time;
       if (raw) {
         var d = new Date(raw);
         if (!isNaN(d.getTime())) {
