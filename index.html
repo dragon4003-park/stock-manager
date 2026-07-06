@@ -1,582 +1,513 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>실험실 소모품 관리 시스템</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  .tab-btn { border-bottom: 2px solid transparent; color: #6b7280; }
-  .tab-btn.active { border-bottom: 2px solid #2563eb; color: #2563eb; }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 12px 20px; border-radius: 8px; color: white; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
-  .toast.show { opacity: 1; }
-  .toast.success { background: #16a34a; }
-  .toast.error { background: #dc2626; }
-  .badge-ok { background:#dcfce7; color:#16a34a; }
-  .badge-low { background:#fef9c3; color:#ca8a04; }
-  .badge-out { background:#fee2e2; color:#dc2626; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>실험실 소모품 관리</title>
+
+    <!-- 캐시 방지 메타태그 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <!-- 자동 캐시 버스팅: 즐겨찾기 접속 시 매일 자동으로 최신 버전 로드 -->
+    <script>
+        (function () {
+            var today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            var url = new URL(window.location.href);
+            if (url.searchParams.get('v') !== today) {
+                url.searchParams.set('v', today);
+                window.location.replace(url.toString());
+            }
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50:'#eff6ff', 100:'#dbeafe', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+        * { font-family: 'PretendardVariable', -apple-system, sans-serif; }
+        body { background: #f8fafc; }
+        .tab-btn.active { color: #2563eb; }
+        .tab-btn.active svg { stroke: #2563eb; }
+        .tab-btn svg { stroke: #9ca3af; }
+        .badge-in  { background:#dcfce7; color:#16a34a; }
+        .badge-out { background:#fee2e2; color:#dc2626; }
+        .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+                 background:#1e293b; color:#fff; padding:10px 20px; border-radius:8px;
+                 font-size:14px; z-index:9999; opacity:0; transition:opacity .3s;
+                 white-space:nowrap; pointer-events:none; }
+        .toast.show { opacity:1; }
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+        select, input { font-size:16px !important; } /* iOS 줌 방지 */
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="min-h-screen">
 
-<!-- 헤더 -->
-<header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3">
-  <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-    </svg>
-  </div>
-  <h1 class="text-lg font-bold text-gray-800">실험실 소모품 관리 시스템</h1>
-</header>
-
-<!-- 탭 네비게이션 -->
-<nav class="bg-white border-b border-gray-200 px-6 flex gap-1">
-  <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn active px-4 py-3 text-sm font-medium">재고 현황</button>
-  <button onclick="switchTab('register')" id="tab-register" class="tab-btn px-4 py-3 text-sm font-medium">소모품 등록</button>
-  <button onclick="switchTab('transaction')" id="tab-transaction" class="tab-btn px-4 py-3 text-sm font-medium">입출고</button>
-  <button onclick="switchTab('history')" id="tab-history" class="tab-btn px-4 py-3 text-sm font-medium">거래 내역</button>
-</nav>
-
-<main class="max-w-7xl mx-auto px-4 py-6">
-
-  <!-- ===== 재고 현황 탭 ===== -->
-  <div id="content-inventory" class="tab-content active">
-    <!-- 검색/필터 -->
-    <div class="flex flex-wrap gap-2 mb-4">
-      <input id="searchInput" type="text" placeholder="품명 검색..." oninput="renderInventory()"
-        class="flex-1 min-w-[200px] px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
-      <select id="filterCategory" onchange="renderInventory()"
-        class="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white min-w-[130px]">
-        <option value="">전체 분류</option>
-      </select>
-      <select id="filterStatus" onchange="renderInventory()"
-        class="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white min-w-[120px]">
-        <option value="">전체 상태</option>
-        <option value="ok">정상</option>
-        <option value="low">재고 부족</option>
-        <option value="out">재고 소진</option>
-      </select>
-      <button onclick="loadItems()" class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">새로고침</button>
-    </div>
-
-    <!-- 통계 카드 -->
-    <div class="grid grid-cols-3 gap-3 mb-4">
-      <div class="bg-white border border-gray-200 rounded-lg p-4">
-        <div class="text-xs text-gray-500 mb-1">전체 품목</div>
-        <div id="statTotal" class="text-2xl font-bold text-gray-800">-</div>
-      </div>
-      <div class="bg-white border border-yellow-300 rounded-lg p-4">
-        <div class="text-xs text-gray-500 mb-1">재고 부족</div>
-        <div id="statLow" class="text-2xl font-bold text-yellow-500">-</div>
-      </div>
-      <div class="bg-white border border-red-300 rounded-lg p-4">
-        <div class="text-xs text-gray-500 mb-1">재고 소진</div>
-        <div id="statOut" class="text-2xl font-bold text-red-500">-</div>
-      </div>
-    </div>
-
-    <!-- 테이블 -->
-    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th class="text-left px-4 py-3 text-gray-600 font-semibold">품명</th>
-            <th class="text-left px-4 py-3 text-gray-600 font-semibold">분류</th>
-            <th class="text-left px-4 py-3 text-gray-600 font-semibold">단위</th>
-            <th class="text-right px-4 py-3 text-gray-600 font-semibold">현재고</th>
-            <th class="text-right px-4 py-3 text-gray-600 font-semibold">최소재고</th>
-            <th class="text-center px-4 py-3 text-gray-600 font-semibold">상태</th>
-            <th class="text-center px-4 py-3 text-gray-600 font-semibold">관리</th>
-          </tr>
-        </thead>
-        <tbody id="inventoryTableBody">
-          <tr><td colspan="7" class="text-center py-10 text-gray-400">데이터 불러오는 중...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ===== 소모품 등록 탭 ===== -->
-  <div id="content-register" class="tab-content">
-    <div class="max-w-lg bg-white border border-gray-200 rounded-lg p-6">
-      <h2 class="text-base font-semibold text-gray-800 mb-4">새 소모품 등록</h2>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">품명 *</label>
-          <input id="regName" type="text" placeholder="예: 50mL 팔콘튜브"
-            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">분류 *</label>
-          <input id="regCategory" type="text" placeholder="예: 튜브/병"
-            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">단위</label>
-          <input id="regUnit" type="text" placeholder="예: 개, box, 팩"
-            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">현재 재고</label>
-            <input id="regStock" type="number" min="0" value="0"
-              class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">최소 재고</label>
-            <input id="regMinStock" type="number" min="0" value="0"
-              class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">비고</label>
-          <input id="regNote" type="text" placeholder="선택사항"
-            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-        <button onclick="registerItem()"
-          class="w-full py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-          등록하기
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 입출고 탭 ===== -->
-  <div id="content-transaction" class="tab-content">
-    <div class="max-w-lg bg-white border border-gray-200 rounded-lg p-6">
-      <h2 class="text-base font-semibold text-gray-800 mb-4">입출고 처리</h2>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">품목 선택 *</label>
-          <select id="txItem" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-            <option value="">품목을 선택하세요</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-2">구분 *</label>
-          <div class="flex gap-2">
-            <button onclick="setTxType('in')" id="btnIn"
-              class="flex-1 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600">
-              입고
-            </button>
-            <button onclick="setTxType('out')" id="btnOut"
-              class="flex-1 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-red-50 hover:border-red-400 hover:text-red-600">
-              출고
-            </button>
-          </div>
-          <input type="hidden" id="txType" value="">
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">수량 *</label>
-          <input id="txQty" type="number" min="1" value="1"
-            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">담당자</label>
-          <input id="txHandler" type="text" placeholder="이름 입력"
-            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">비고</label>
-          <input id="txNote" type="text" placeholder="선택사항"
-            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-        <button onclick="submitTransaction()"
-          class="w-full py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-          처리하기
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 거래 내역 탭 ===== -->
-  <div id="content-history" class="tab-content">
-    <div class="flex flex-wrap gap-2 mb-4">
-      <select id="historyItem" onchange="renderHistory()"
-        class="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white min-w-[200px]">
-        <option value="">전체 품목</option>
-      </select>
-      <select id="historyType" onchange="renderHistory()"
-        class="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white">
-        <option value="">전체</option>
-        <option value="in">입고</option>
-        <option value="out">출고</option>
-      </select>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th class="text-left px-4 py-3 text-gray-600 font-semibold">품명</th>
-            <th class="text-center px-4 py-3 text-gray-600 font-semibold">구분</th>
-            <th class="text-right px-4 py-3 text-gray-600 font-semibold">수량</th>
-            <th class="text-right px-4 py-3 text-gray-600 font-semibold">처리 후 재고</th>
-            <th class="text-left px-4 py-3 text-gray-600 font-semibold">담당자</th>
-            <th class="text-left px-4 py-3 text-gray-600 font-semibold">비고</th>
-          </tr>
-        </thead>
-        <tbody id="historyTableBody">
-          <tr><td colspan="6" class="text-center py-10 text-gray-400">데이터 불러오는 중...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-</main>
-
-<!-- 삭제 확인 모달 -->
-<div id="deleteModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl p-6 max-w-sm w-full">
-    <h3 class="text-base font-semibold text-gray-800 mb-2">소모품 삭제</h3>
-    <p class="text-sm text-gray-600 mb-4"><span id="deleteItemName" class="font-medium"></span>을(를) 삭제할까요?</p>
-    <div class="flex gap-2">
-      <button onclick="closeDeleteModal()" class="flex-1 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">취소</button>
-      <button onclick="confirmDelete()" class="flex-1 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">삭제</button>
-    </div>
-  </div>
-</div>
-
-<!-- 편집 모달 -->
-<div id="editModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl p-6 max-w-sm w-full">
-    <h3 class="text-base font-semibold text-gray-800 mb-4">소모품 수정</h3>
-    <input type="hidden" id="editId">
-    <div class="space-y-3">
-      <div>
-        <label class="block text-sm text-gray-600 mb-1">품명</label>
-        <input id="editName" type="text" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-      </div>
-      <div>
-        <label class="block text-sm text-gray-600 mb-1">분류</label>
-        <input id="editCategory" type="text" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-      </div>
-      <div>
-        <label class="block text-sm text-gray-600 mb-1">단위</label>
-        <input id="editUnit" type="text" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">현재 재고</label>
-          <input id="editStock" type="number" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">최소 재고</label>
-          <input id="editMinStock" type="number" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-        </div>
-      </div>
-    </div>
-    <div class="flex gap-2 mt-4">
-      <button onclick="closeEditModal()" class="flex-1 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">취소</button>
-      <button onclick="confirmEdit()" class="flex-1 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- 토스트 -->
+<!-- 토스트 알림 -->
 <div id="toast" class="toast"></div>
 
+<!-- 헤더 -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4m0-10L4 7m8 10V7"/>
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-gray-800 leading-tight">소모품 관리</p>
+                <p class="text-xs text-gray-400 leading-tight hidden sm:block">Laboratory Consumable Manager</p>
+            </div>
+        </div>
+        <span id="headerDate" class="text-xs text-gray-400"></span>
+    </div>
+</header>
+
+<!-- 메인 컨텐츠 -->
+<main class="max-w-5xl mx-auto px-3 pt-4 pb-24" id="mainContent">
+    <div class="flex items-center justify-center h-40">
+        <div class="text-gray-400 text-sm">로딩 중...</div>
+    </div>
+</main>
+
+<!-- 하단 탭 네비게이션 -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+    <div class="max-w-5xl mx-auto flex">
+        <button onclick="switchTab('inventory')" id="tab-inventory"
+                class="tab-btn active flex-1 flex flex-col items-center py-2 gap-0.5">
+            <svg class="w-5 h-5" fill="none" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4m0-10L4 7m8 10V7"/>
+            </svg>
+            <span class="text-xs">재고</span>
+        </button>
+        <button onclick="switchTab('register')" id="tab-register"
+                class="tab-btn flex-1 flex flex-col items-center py-2 gap-0.5">
+            <svg class="w-5 h-5" fill="none" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span class="text-xs">등록</span>
+        </button>
+        <button onclick="switchTab('transaction')" id="tab-transaction"
+                class="tab-btn flex-1 flex flex-col items-center py-2 gap-0.5">
+            <svg class="w-5 h-5" fill="none" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+            </svg>
+            <span class="text-xs">입출고</span>
+        </button>
+        <button onclick="switchTab('history')" id="tab-history"
+                class="tab-btn flex-1 flex flex-col items-center py-2 gap-0.5">
+            <svg class="w-5 h-5" fill="none" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <span class="text-xs">내역</span>
+        </button>
+    </div>
+</nav>
+
 <script>
-  // ── Supabase 초기화 ──────────────────────────────────────────────────────
-  const SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqdGZyYndha2NqcHFjcnp0cGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NDYxNTUsImV4cCI6MjA5NTUyMjE1NX0.8d8bkHFYFV8BrR4kR-OHg3NiOTqBiXDPdeTM5q513RA';
-  const { createClient } = supabase;
-  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqdGZyYndha2NqcHFjcnp0cGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NDYxNTUsImV4cCI6MjA5NTUyMjE1NX0.8d8bkHFYFV8BrR4kR-OHg3NiOTqBiXDPdeTM5q513RA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ── 전역 데이터 ───────────────────────────────────────────────────────────
-  let items = [];
-  let transactions = [];
-  let deleteTargetId = null;
+let currentTab = 'inventory';
+let allItems = [];
 
-  // ── 초기 로드 ─────────────────────────────────────────────────────────────
-  window.addEventListener('DOMContentLoaded', () => {
-    loadItems();
-    loadTransactions();
-  });
-
-  // ── 탭 전환 ───────────────────────────────────────────────────────────────
-  function switchTab(id) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('content-' + id).classList.add('active');
-    document.getElementById('tab-' + id).classList.add('active');
-
-    if (id === 'transaction') populateTxSelect();
-    if (id === 'history') { populateHistorySelect(); renderHistory(); }
-  }
-
-  // ── 데이터 로드 ───────────────────────────────────────────────────────────
-  async function loadItems() {
-    const { data, error } = await db.from('items').select('*').order('name');
-    if (error) { showToast('items 로드 오류: ' + error.message, 'error'); return; }
-    items = data || [];
-    renderInventory();
-    syncCategoryFilter();
-  }
-
-  async function loadTransactions() {
-    const { data, error } = await db.from('transactions').select('*').order('id', { ascending: false });
-    if (error) { showToast('거래내역 로드 오류: ' + error.message, 'error'); return; }
-    transactions = data || [];
-    renderHistory();
-  }
-
-  // ── 카테고리 필터 동기화 ──────────────────────────────────────────────────
-  function syncCategoryFilter() {
-    const sel = document.getElementById('filterCategory');
-    const cats = [...new Set(items.map(i => i.category).filter(Boolean))].sort();
-    const current = sel.value;
-    sel.innerHTML = '<option value="">전체 분류</option>'
-      + cats.map(c => `<option value="${c}"${c === current ? ' selected' : ''}>${c}</option>`).join('');
-  }
-
-  // ── 재고 현황 렌더링 ──────────────────────────────────────────────────────
-  function renderInventory() {
-    const search = (document.getElementById('searchInput').value || '').toLowerCase();
-    const cat    = document.getElementById('filterCategory').value;
-    const status = document.getElementById('filterStatus').value;
-
-    let filtered = items.filter(item => {
-      const matchName = !search || (item.name || '').toLowerCase().includes(search);
-      const matchCat  = !cat    || item.category === cat;
-      const st        = getStatus(item);
-      const matchSt   = !status || st === status;
-      return matchName && matchCat && matchSt;
-    });
-
-    document.getElementById('statTotal').textContent = items.length;
-    document.getElementById('statLow').textContent   = items.filter(i => getStatus(i) === 'low').length;
-    document.getElementById('statOut').textContent   = items.filter(i => getStatus(i) === 'out').length;
-
-    const tbody = document.getElementById('inventoryTableBody');
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">등록된 소모품이 없습니다.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(item => {
-      const st = getStatus(item);
-      const badge = st === 'ok'
-        ? '<span class="badge-ok px-2 py-0.5 rounded text-xs font-medium">정상</span>'
-        : st === 'low'
-        ? '<span class="badge-low px-2 py-0.5 rounded text-xs font-medium">부족</span>'
-        : '<span class="badge-out px-2 py-0.5 rounded text-xs font-medium">소진</span>';
-      return `<tr class="border-b border-gray-100 hover:bg-gray-50">
-        <td class="px-4 py-3 font-medium text-gray-800">${item.name || ''}</td>
-        <td class="px-4 py-3 text-gray-500">${item.category || ''}</td>
-        <td class="px-4 py-3 text-gray-500">${item.unit || ''}</td>
-        <td class="px-4 py-3 text-right font-semibold">${item.stock ?? 0}</td>
-        <td class="px-4 py-3 text-right text-gray-500">${item.min_stock ?? 0}</td>
-        <td class="px-4 py-3 text-center">${badge}</td>
-        <td class="px-4 py-3 text-center">
-          <button onclick="openEditModal('${item.id}')" class="text-xs text-blue-600 hover:underline mr-2">수정</button>
-          <button onclick="openDeleteModal('${item.id}','${(item.name||'').replace(/'/g,"\'")}') " class="text-xs text-red-500 hover:underline">삭제</button>
-        </td>
-      </tr>`;
-    }).join('');
-  }
-
-  function getStatus(item) {
-    const s = item.stock ?? 0;
-    const m = item.min_stock ?? 0;
-    if (s <= 0) return 'out';
-    if (s <= m) return 'low';
-    return 'ok';
-  }
-
-  // ── 소모품 등록 ───────────────────────────────────────────────────────────
-  async function registerItem() {
-    const name     = document.getElementById('regName').value.trim();
-    const category = document.getElementById('regCategory').value.trim();
-    const unit     = document.getElementById('regUnit').value.trim();
-    const stock    = parseInt(document.getElementById('regStock').value) || 0;
-    const minStock = parseInt(document.getElementById('regMinStock').value) || 0;
-    const note     = document.getElementById('regNote').value.trim();
-
-    if (!name || !category) { showToast('품명과 분류는 필수입니다.', 'error'); return; }
-
-    const { error } = await db.from('items').insert([{ name, category, unit, stock, min_stock: minStock, note }]);
-    if (error) { showToast('등록 오류: ' + error.message, 'error'); return; }
-
-    showToast(name + ' 등록 완료!', 'success');
-    ['regName','regCategory','regUnit','regNote'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('regStock').value = '0';
-    document.getElementById('regMinStock').value = '0';
-    loadItems();
-  }
-
-  // ── 입출고 처리 ───────────────────────────────────────────────────────────
-  function populateTxSelect() {
-    const sel = document.getElementById('txItem');
-    sel.innerHTML = '<option value="">품목을 선택하세요</option>'
-      + items.map(i => `<option value="${i.id}" data-stock="${i.stock}" data-name="${i.name}">${i.name} (현재: ${i.stock ?? 0}${i.unit ? ' '+i.unit : ''})</option>`).join('');
-  }
-
-  function setTxType(type) {
-    document.getElementById('txType').value = type;
-    const btnIn  = document.getElementById('btnIn');
-    const btnOut = document.getElementById('btnOut');
-    if (type === 'in') {
-      btnIn.className  = 'flex-1 py-2 text-sm font-medium rounded-lg border border-blue-500 bg-blue-50 text-blue-600';
-      btnOut.className = 'flex-1 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-red-50 hover:border-red-400 hover:text-red-600';
-    } else {
-      btnOut.className = 'flex-1 py-2 text-sm font-medium rounded-lg border border-red-500 bg-red-50 text-red-600';
-      btnIn.className  = 'flex-1 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600';
-    }
-  }
-
-  async function submitTransaction() {
-    const sel     = document.getElementById('txItem');
-    const itemId  = sel.value;
-    const type    = document.getElementById('txType').value;
-    const qty     = parseInt(document.getElementById('txQty').value) || 0;
-    const handler = document.getElementById('txHandler').value.trim();
-    const note    = document.getElementById('txNote').value.trim();
-
-    if (!itemId) { showToast('품목을 선택하세요.', 'error'); return; }
-    if (!type)   { showToast('입고/출고를 선택하세요.', 'error'); return; }
-    if (qty <= 0){ showToast('수량을 1 이상 입력하세요.', 'error'); return; }
-
-    const item = items.find(i => i.id === itemId);
-    if (!item) { showToast('품목을 찾을 수 없습니다.', 'error'); return; }
-
-    const currentStock = item.stock ?? 0;
-    if (type === 'out' && qty > currentStock) {
-      showToast('출고 수량이 현재 재고보다 많습니다. (현재: ' + currentStock + ')', 'error');
-      return;
-    }
-
-    const newStock = type === 'in' ? currentStock + qty : currentStock - qty;
-
-    const { error: txErr } = await db.from('transactions').insert([{
-      item_id: itemId,
-      item_name: item.name,
-      type,
-      quantity: qty,
-      stock_after: newStock,
-      handler: handler || null,
-      note: note || null
-    }]);
-    if (txErr) { showToast('입출고 오류: ' + txErr.message, 'error'); return; }
-
-    const { error: upErr } = await db.from('items').update({ stock: newStock }).eq('id', itemId);
-    if (upErr) { showToast('재고 업데이트 오류: ' + upErr.message, 'error'); return; }
-
-    showToast((type === 'in' ? '입고' : '출고') + ' 처리 완료!', 'success');
-    document.getElementById('txItem').value = '';
-    document.getElementById('txType').value = '';
-    document.getElementById('txQty').value = '1';
-    document.getElementById('txHandler').value = '';
-    document.getElementById('txNote').value = '';
-    setTxType('');
-    document.getElementById('btnIn').className = 'flex-1 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600';
-    document.getElementById('btnOut').className = 'flex-1 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-red-50 hover:border-red-400 hover:text-red-600';
-    await loadItems();
-    await loadTransactions();
-    populateTxSelect();
-  }
-
-  // ── 거래 내역 ─────────────────────────────────────────────────────────────
-  function populateHistorySelect() {
-    const sel = document.getElementById('historyItem');
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">전체 품목</option>'
-      + items.map(i => `<option value="${i.id}"${i.id === cur ? ' selected' : ''}>${i.name}</option>`).join('');
-  }
-
-  function renderHistory() {
-    const itemId = document.getElementById('historyItem').value;
-    const type   = document.getElementById('historyType').value;
-
-    let filtered = transactions.filter(t => {
-      const matchItem = !itemId || t.item_id === itemId;
-      const matchType = !type   || t.type === type;
-      return matchItem && matchType;
-    });
-
-    const tbody = document.getElementById('historyTableBody');
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-400">거래 내역이 없습니다.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(t => {
-      const badge = t.type === 'in'
-        ? '<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">입고</span>'
-        : '<span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">출고</span>';
-      return `<tr class="border-b border-gray-100 hover:bg-gray-50">
-        <td class="px-4 py-3 font-medium text-gray-800">${t.item_name || ''}</td>
-        <td class="px-4 py-3 text-center">${badge}</td>
-        <td class="px-4 py-3 text-right font-semibold">${t.quantity ?? 0}</td>
-        <td class="px-4 py-3 text-right text-gray-600">${t.stock_after ?? 0}</td>
-        <td class="px-4 py-3 text-gray-500">${t.handler || '-'}</td>
-        <td class="px-4 py-3 text-gray-400 text-xs">${t.note || ''}</td>
-      </tr>`;
-    }).join('');
-  }
-
-  // ── 수정 모달 ─────────────────────────────────────────────────────────────
-  function openEditModal(id) {
-    const item = items.find(i => i.id === id);
-    if (!item) return;
-    document.getElementById('editId').value       = item.id;
-    document.getElementById('editName').value     = item.name || '';
-    document.getElementById('editCategory').value = item.category || '';
-    document.getElementById('editUnit').value     = item.unit || '';
-    document.getElementById('editStock').value    = item.stock ?? 0;
-    document.getElementById('editMinStock').value = item.min_stock ?? 0;
-    document.getElementById('editModal').classList.remove('hidden');
-  }
-
-  function closeEditModal() {
-    document.getElementById('editModal').classList.add('hidden');
-  }
-
-  async function confirmEdit() {
-    const id       = document.getElementById('editId').value;
-    const name     = document.getElementById('editName').value.trim();
-    const category = document.getElementById('editCategory').value.trim();
-    const unit     = document.getElementById('editUnit').value.trim();
-    const stock    = parseInt(document.getElementById('editStock').value) || 0;
-    const minStock = parseInt(document.getElementById('editMinStock').value) || 0;
-
-    const { error } = await db.from('items').update({ name, category, unit, stock, min_stock: minStock }).eq('id', id);
-    if (error) { showToast('수정 오류: ' + error.message, 'error'); return; }
-    showToast('수정 완료!', 'success');
-    closeEditModal();
-    loadItems();
-  }
-
-  // ── 삭제 모달 ─────────────────────────────────────────────────────────────
-  function openDeleteModal(id, name) {
-    deleteTargetId = id;
-    document.getElementById('deleteItemName').textContent = name;
-    document.getElementById('deleteModal').classList.remove('hidden');
-  }
-
-  function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.add('hidden');
-    deleteTargetId = null;
-  }
-
-  async function confirmDelete() {
-    if (!deleteTargetId) return;
-    const { error } = await db.from('items').delete().eq('id', deleteTargetId);
-    if (error) { showToast('삭제 오류: ' + error.message, 'error'); return; }
-    showToast('삭제 완료!', 'success');
-    closeDeleteModal();
-    loadItems();
-  }
-
-  // ── 토스트 ────────────────────────────────────────────────────────────────
-  function showToast(msg, type = 'success') {
+/* ── 유틸 ─────────────────────────────────────────── */
+function showToast(msg, isError = false) {
     const t = document.getElementById('toast');
     t.textContent = msg;
-    t.className = 'toast ' + type + ' show';
-    setTimeout(() => { t.classList.remove('show'); }, 3000);
-  }
+    t.style.background = isError ? '#dc2626' : '#1e293b';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function fmtDate(d) {
+    if (!d) return '-';
+    return new Date(d).toLocaleDateString('ko-KR', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+function setHeaderDate() {
+    document.getElementById('headerDate').textContent =
+        new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+}
+
+/* ── 탭 전환 ────────────────────────────────────────── */
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    renderTab(tab);
+}
+
+async function renderTab(tab) {
+    const main = document.getElementById('mainContent');
+    main.innerHTML = '<div class="flex items-center justify-center h-40"><div class="text-gray-400 text-sm animate-pulse">불러오는 중...</div></div>';
+    if (tab === 'inventory')    await renderInventory();
+    else if (tab === 'register')    await renderRegister();
+    else if (tab === 'transaction') await renderTransaction();
+    else if (tab === 'history')     await renderHistory();
+}
+
+/* ══════════════════════════════════════════════════════
+   1. 재고 현황
+══════════════════════════════════════════════════════ */
+async function renderInventory() {
+    const { data, error } = await sb.from('items').select('*').order('name');
+    if (error) { showToast('데이터 로드 실패', true); return; }
+    allItems = data || [];
+
+    const cats = ['전체', ...new Set(allItems.map(i => i.category).filter(Boolean))];
+    const lowStock = allItems.filter(i => i.quantity <= (i.min_stock || 0));
+
+    const main = document.getElementById('mainContent');
+    main.innerHTML = `
+        ${lowStock.length ? `
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+            <p class="text-red-700 text-xs font-semibold mb-1">재고 부족 항목 ${lowStock.length}개</p>
+            <p class="text-red-600 text-xs">${lowStock.map(i=>i.name).join(', ')}</p>
+        </div>` : ''}
+
+        <div class="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+            ${cats.map((c,i) => `
+            <button onclick="filterCat(this, '${c}')"
+                class="cat-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
+                ${i===0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300'}">${c}</button>
+            `).join('')}
+        </div>
+
+        <div id="itemCards" class="space-y-2">
+            ${renderItemCards(allItems)}
+        </div>
+    `;
+}
+
+function renderItemCards(items) {
+    if (!items.length) return '<div class="text-center text-gray-400 py-10 text-sm">항목이 없습니다</div>';
+    return items.map(item => {
+        const low = item.quantity <= (item.min_stock || 0);
+        return `
+        <div class="bg-white rounded-xl border ${low ? 'border-red-200' : 'border-gray-200'} p-3.5">
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-gray-800 text-sm truncate">${item.name}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">${item.category || ''}${item.location ? ' · ' + item.location : ''}</p>
+                </div>
+                <div class="text-right ml-3 flex-shrink-0">
+                    <p class="text-lg font-bold ${low ? 'text-red-600' : 'text-blue-600'}">${item.quantity}</p>
+                    <p class="text-xs text-gray-400">${item.unit || ''}</p>
+                </div>
+            </div>
+            ${item.min_stock ? `
+            <div class="flex items-center gap-2 mt-2">
+                <div class="flex-1 bg-gray-100 rounded-full h-1.5">
+                    <div class="h-1.5 rounded-full ${low ? 'bg-red-400' : 'bg-blue-500'} transition-all"
+                         style="width:${Math.min(100, Math.round(item.quantity / (item.min_stock * 3) * 100))}%"></div>
+                </div>
+                <p class="text-xs text-gray-400 flex-shrink-0">최소 ${item.min_stock}</p>
+            </div>` : ''}
+            <div class="flex gap-2 mt-3">
+                <button onclick="quickTransaction(${item.id}, 'in', '${item.name.replace(/'/g,"\'")}', ${item.quantity})"
+                    class="flex-1 bg-green-50 text-green-700 text-xs font-medium py-2 rounded-lg border border-green-200 active:bg-green-100">
+                    + 입고
+                </button>
+                <button onclick="quickTransaction(${item.id}, 'out', '${item.name.replace(/'/g,"\'")}', ${item.quantity})"
+                    class="flex-1 bg-red-50 text-red-700 text-xs font-medium py-2 rounded-lg border border-red-200 active:bg-red-100">
+                    - 출고
+                </button>
+                <button onclick="deleteItem(${item.id}, '${item.name.replace(/'/g,"\'")}' )"
+                    class="bg-gray-50 text-gray-400 text-xs py-2 px-3 rounded-lg border border-gray-200 active:bg-gray-100">
+                    삭제
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function filterCat(btn, cat) {
+    document.querySelectorAll('.cat-btn').forEach(b => {
+        b.className = b.className.replace(/bg-blue-600 text-white border-blue-600/, '').trim();
+        b.classList.add('bg-white', 'text-gray-600', 'border-gray-300');
+    });
+    btn.classList.remove('bg-white', 'text-gray-600', 'border-gray-300');
+    btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+    const filtered = cat === '전체' ? allItems : allItems.filter(i => i.category === cat);
+    document.getElementById('itemCards').innerHTML = renderItemCards(filtered);
+}
+
+async function quickTransaction(itemId, type, itemName, currentQty) {
+    const qty = prompt(`${itemName} ${type === 'in' ? '입고' : '출고'} 수량을 입력하세요:`);
+    if (!qty || isNaN(qty) || Number(qty) <= 0) return;
+    const n = Number(qty);
+    if (type === 'out' && n > currentQty) {
+        showToast(`재고 부족! 현재 재고: ${currentQty}`, true); return;
+    }
+    const newQty = type === 'in' ? currentQty + n : currentQty - n;
+    const { error: e1 } = await sb.from('items').update({ quantity: newQty }).eq('id', itemId);
+    if (e1) { showToast('오류 발생', true); return; }
+    const { error: e2 } = await sb.from('transactions').insert({
+        item_id: itemId, type, quantity: n,
+        date: new Date().toISOString(), note: '빠른' + (type==='in'?'입고':'출고')
+    });
+    if (e2) console.warn('트랜잭션 저장 오류', e2);
+    showToast(`${type === 'in' ? '입고' : '출고'} 완료! (${n}${'개'})`);;
+    renderInventory();
+}
+
+async function deleteItem(id, name) {
+    if (!confirm(`"${name}"을 삭제하시겠습니까?`)) return;
+    const { error } = await sb.from('items').delete().eq('id', id);
+    if (error) { showToast('삭제 실패', true); return; }
+    showToast('삭제 완료');
+    renderInventory();
+}
+
+/* ══════════════════════════════════════════════════════
+   2. 소모품 등록
+══════════════════════════════════════════════════════ */
+async function renderRegister() {
+    const { data: items } = await sb.from('items').select('category').order('category');
+    const cats = [...new Set((items||[]).map(i=>i.category).filter(Boolean))];
+
+    document.getElementById('mainContent').innerHTML = `
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <h2 class="font-bold text-gray-800 mb-4">소모품 등록</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-medium text-gray-500 mb-1 block">품목명 *</label>
+                    <input id="reg_name" type="text" placeholder="예: 에탄올 99%"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-500 mb-1 block">카테고리</label>
+                    <input id="reg_category" type="text" placeholder="예: 시약, 소모품"
+                        list="cat_list"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <datalist id="cat_list">
+                        ${cats.map(c => `<option value="${c}">`).join('')}
+                    </datalist>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-medium text-gray-500 mb-1 block">현재 수량</label>
+                        <input id="reg_quantity" type="number" placeholder="0" min="0"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-gray-500 mb-1 block">단위</label>
+                        <input id="reg_unit" type="text" placeholder="개, mL, box"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-medium text-gray-500 mb-1 block">최소 재고</label>
+                        <input id="reg_min_stock" type="number" placeholder="0" min="0"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-gray-500 mb-1 block">보관 위치</label>
+                        <input id="reg_location" type="text" placeholder="예: 냉장고 A"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-500 mb-1 block">메모</label>
+                    <textarea id="reg_note" rows="2" placeholder="기타 정보"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                </div>
+                <button onclick="submitRegister()"
+                    class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg text-sm active:bg-blue-700 mt-1">
+                    등록하기
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function submitRegister() {
+    const name = document.getElementById('reg_name').value.trim();
+    if (!name) { showToast('품목명을 입력하세요', true); return; }
+    const payload = {
+        name,
+        category: document.getElementById('reg_category').value.trim() || null,
+        quantity: parseInt(document.getElementById('reg_quantity').value) || 0,
+        unit:     document.getElementById('reg_unit').value.trim() || null,
+        min_stock: parseInt(document.getElementById('reg_min_stock').value) || 0,
+        location: document.getElementById('reg_location').value.trim() || null,
+        description: document.getElementById('reg_note').value.trim() || null,
+    };
+    const { error } = await sb.from('items').insert(payload);
+    if (error) { showToast('등록 실패: ' + error.message, true); return; }
+    showToast('등록 완료!');
+    renderRegister();
+}
+
+/* ══════════════════════════════════════════════════════
+   3. 입출고
+══════════════════════════════════════════════════════ */
+async function renderTransaction() {
+    const { data: items } = await sb.from('items').select('id, name, quantity, unit').order('name');
+    allItems = items || [];
+
+    document.getElementById('mainContent').innerHTML = `
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <h2 class="font-bold text-gray-800 mb-4">입출고 등록</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-medium text-gray-500 mb-1 block">품목 선택 *</label>
+                    <select id="tx_item"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="">-- 품목을 선택하세요 --</option>
+                        ${allItems.map(i => `<option value="${i.id}" data-qty="${i.quantity}" data-unit="${i.unit||''}">${i.name} (현재: ${i.quantity}${i.unit||''} )</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-500 mb-2 block">구분 *</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="selectType('in')" id="btn_in"
+                            class="py-3 rounded-lg border-2 border-green-500 bg-green-50 text-green-700 font-medium text-sm">
+                            입고
+                        </button>
+                        <button onclick="selectType('out')" id="btn_out"
+                            class="py-3 rounded-lg border-2 border-gray-200 text-gray-400 font-medium text-sm">
+                            출고
+                        </button>
+                    </div>
+                    <input type="hidden" id="tx_type" value="in">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-500 mb-1 block">수량 *</label>
+                    <input id="tx_qty" type="number" placeholder="0" min="1"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-500 mb-1 block">담당자</label>
+                    <input id="tx_user" type="text" placeholder="이름 (선택)"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-500 mb-1 block">메모</label>
+                    <input id="tx_note" type="text" placeholder="사유 등 (선택)"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button onclick="submitTransaction()"
+                    class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg text-sm active:bg-blue-700">
+                    등록하기
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function selectType(type) {
+    document.getElementById('tx_type').value = type;
+    const inBtn  = document.getElementById('btn_in');
+    const outBtn = document.getElementById('btn_out');
+    if (type === 'in') {
+        inBtn.className  = 'py-3 rounded-lg border-2 border-green-500 bg-green-50 text-green-700 font-medium text-sm';
+        outBtn.className = 'py-3 rounded-lg border-2 border-gray-200 text-gray-400 font-medium text-sm';
+    } else {
+        outBtn.className = 'py-3 rounded-lg border-2 border-red-500 bg-red-50 text-red-700 font-medium text-sm';
+        inBtn.className  = 'py-3 rounded-lg border-2 border-gray-200 text-gray-400 font-medium text-sm';
+    }
+}
+
+async function submitTransaction() {
+    const itemId = document.getElementById('tx_item').value;
+    const type   = document.getElementById('tx_type').value;
+    const qty    = parseInt(document.getElementById('tx_qty').value);
+    const user   = document.getElementById('tx_user').value.trim();
+    const note   = document.getElementById('tx_note').value.trim();
+
+    if (!itemId) { showToast('품목을 선택하세요', true); return; }
+    if (!qty || qty <= 0) { showToast('수량을 입력하세요', true); return; }
+
+    const sel = document.getElementById('tx_item');
+    const opt = sel.options[sel.selectedIndex];
+    const currentQty = parseInt(opt.dataset.qty) || 0;
+
+    if (type === 'out' && qty > currentQty) {
+        showToast(`재고 부족! 현재 재고: ${currentQty}`, true); return;
+    }
+
+    const newQty = type === 'in' ? currentQty + qty : currentQty - qty;
+    const { error: e1 } = await sb.from('items').update({ quantity: newQty }).eq('id', itemId);
+    if (e1) { showToast('수량 업데이트 실패', true); return; }
+
+    const { error: e2 } = await sb.from('transactions').insert({
+        item_id: parseInt(itemId), type, quantity: qty,
+        date: new Date().toISOString(),
+        user_name: user || null,
+        note: note || null
+    });
+    if (e2) console.warn('트랜잭션 저장 오류', e2);
+    showToast(`${type === 'in' ? '입고' : '출고'} 완료!`);
+    renderTransaction();
+}
+
+/* ══════════════════════════════════════════════════════
+   4. 거래 내역
+══════════════════════════════════════════════════════ */
+async function renderHistory() {
+    const { data, error } = await sb
+        .from('transactions')
+        .select('*, items(name, unit)')
+        .order('id', { ascending: false })
+        .limit(100);
+
+    if (error) { showToast('내역 로드 실패', true); return; }
+    const list = data || [];
+
+    document.getElementById('mainContent').innerHTML = `
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="font-bold text-gray-800">입출고 내역</h2>
+            <span class="text-xs text-gray-400">최근 ${list.length}건</span>
+        </div>
+        ${!list.length
+            ? '<div class="text-center text-gray-400 py-16 text-sm">내역이 없습니다</div>'
+            : '<div class="space-y-2">' + list.map(tx => `
+            <div class="bg-white rounded-xl border border-gray-200 p-3.5">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="badge-${tx.type} text-xs font-semibold px-2 py-0.5 rounded flex-shrink-0">
+                            ${tx.type === 'in' ? '입고' : '출고'}
+                        </span>
+                        <p class="text-sm font-medium text-gray-800 truncate">
+                            ${tx.items ? tx.items.name : '삭제된 품목'}
+                        </p>
+                    </div>
+                    <p class="text-sm font-bold ${tx.type==='in'?'text-green-600':'text-red-600'} flex-shrink-0 ml-2">
+                        ${tx.type==='in'?'+':'-'}${tx.quantity}${tx.items?.unit||''} 
+                    </p>
+                </div>
+                <div class="flex items-center justify-between mt-1.5">
+                    <p class="text-xs text-gray-400">${fmtDate(tx.date)}</p>
+                    <p class="text-xs text-gray-400">${[tx.user_name, tx.note].filter(Boolean).join(' · ') || ''}</p>
+                </div>
+            </div>`).join('')+'</div>'
+        }
+    `;
+}
+
+/* ── 초기화 ────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+    setHeaderDate();
+    renderTab('inventory');
+});
 </script>
 </body>
 </html>
