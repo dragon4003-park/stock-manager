@@ -500,7 +500,7 @@
       if (initS > 0 && r.data && r.data[0]) {
         await db.from('transactions').insert([{
           itemId: r.data[0].id,
-          type: 'in', quantity: initS, afterStock: initS,
+          type: 'in', quantity: initS, stock_after: initS,
           handler: '초기등록', note: '초기 재고', createdAt: now
         }]);
       }
@@ -579,7 +579,7 @@
 
       var txR = await db.from('transactions').insert([{
         itemId: selItem.id, type: type,
-        quantity: qty, afterStock: afterS,
+        quantity: qty, stock_after: afterS,
         handler: handler || null,
         note:    note    || null,
         createdAt: now
@@ -677,7 +677,7 @@
           : '<span style="color:#ef4444;font-weight:500">출고</span>';
         var qty = tx.type==='in' ? ('+'+tx.quantity) : ('-'+tx.quantity);
         var qc  = tx.type==='in' ? '#2563eb' : '#ef4444';
-        var afterS = tx.afterStock != null ? tx.afterStock : (tx.after_stock != null ? tx.after_stock : '-');
+        var afterS = tx.stock_after != null ? tx.stock_after : (tx.after_stock != null ? tx.after_stock : '-');
         return '<tr style="border-bottom:1px solid #f9fafb">' +
           '<td class="px-4 py-3" style="font-size:12px;color:#9ca3af;white-space:nowrap">' + dt + '</td>' +
           '<td class="px-4 py-3" style="font-weight:500;color:#111827">' + h(tx._name) + '</td>' +
