@@ -9,17 +9,18 @@
   <style>
     * { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", "Segoe UI", sans-serif; }
     th, td { white-space: nowrap; }
+    header button { white-space: nowrap; font-size: 12px; }
     .nav-tab {
       cursor: pointer;
       padding: 14px 0;
-      margin-right: 20px;
+      margin-right: 28px;
       border: none;
       border-bottom: 2px solid transparent;
       background: none;
-      font-size: 16px;
+      font-size: 15px;
       color: #6b7280;
-      white-space: nowrap;
       transition: all 0.15s;
+      white-space: nowrap;
     }
     .nav-tab:hover { color: #111827; }
     .nav-tab.active { border-bottom-color: #2563eb; color: #2563eb; font-weight: 600; }
@@ -37,90 +38,89 @@
     }
     .type-btn.in-on  { background: #2563eb; color: white; border-color: #2563eb; }
     .type-btn.out-on { background: #ef4444; color: white; border-color: #ef4444; }
-    .irow { cursor: pointer; padding: 8px 12px; color: #374151; font-size: 13px; border-bottom: 1px solid #f3f4f6; white-space: nowrap; }
+    .irow { cursor: pointer; padding: 8px 12px; color: #374151; font-size: 13px; border-bottom: 1px solid #f3f4f6; }
     .irow:hover { background: #eff6ff; }
     .irow.sel { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
     #toast {
       position: fixed; bottom: 20px; right: 20px;
       padding: 11px 16px; border-radius: 8px;
       color: white; font-size: 14px; font-weight: 500;
-      opacity: 0; transition: opacity 0.3s; z-index: 9999;
+      opacity: 0; transition: opacity 0.3s; z-index: 999;
       pointer-events: none; max-width: 300px;
     }
-    /* 로그인 화면 */
     #login-screen {
-      position: fixed; inset: 0;
-      background: #f3f4f6;
+      position: fixed; inset: 0; background: #f9fafb;
       display: flex; align-items: center; justify-content: center;
       z-index: 100;
     }
-    /* 비밀번호 변경 모달 */
+    #login-screen.hidden { display: none; }
     #pw-modal {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
-      display: none; align-items: center; justify-content: center;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
       z-index: 200;
     }
-    #pw-modal.show { display: flex; }
+    #pw-modal.hidden { display: none; }
+    @media (max-width: 640px) {
+      .desktop-th { display: none; }
+      .desktop-td { display: none; }
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-  <!-- ══ 로그인 화면 ══ -->
+  <!-- ── 로그인 화면 ── -->
   <div id="login-screen">
-    <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm mx-4">
+    <div class="bg-white border border-gray-200 rounded-xl p-8 w-full max-w-sm mx-4">
       <div class="flex items-center gap-3 mb-6">
-        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">실</div>
-        <div>
-          <div class="font-bold text-gray-900 text-base">실험실 소모품 관리 시스템</div>
-          <div class="text-xs text-gray-400">Laboratory Consumable Manager</div>
-        </div>
+        <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">실</div>
+        <span class="font-bold text-gray-900 text-base">실험실 소모품 관리 시스템</span>
       </div>
+      <h2 class="text-lg font-bold text-gray-900 mb-1">로그인</h2>
+      <p class="text-sm text-gray-400 mb-5">이메일과 비밀번호를 입력해주세요.</p>
       <div class="space-y-3">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
           <input id="login-email" type="email" placeholder="이메일 입력"
-            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400">
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
           <input id="login-pw" type="password" placeholder="비밀번호 입력"
-            onkeydown="if(event.key==='Enter')doLogin()"
-            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400">
+            onkeydown="if(event.key==='Enter') doLogin()"
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400">
         </div>
         <p id="login-err" class="text-xs text-red-500 hidden"></p>
         <button onclick="doLogin()"
-          class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors mt-1">
+          class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors">
           로그인
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ══ 비밀번호 변경 모달 ══ -->
-  <div id="pw-modal" onclick="closePwModal(event)">
-    <div class="bg-white rounded-xl p-6 w-full max-w-sm mx-4" onclick="event.stopPropagation()">
+  <!-- ── 비밀번호 변경 모달 ── -->
+  <div id="pw-modal" class="hidden">
+    <div class="bg-white rounded-xl p-6 w-full max-w-sm mx-4">
       <h3 class="font-bold text-gray-900 mb-4">비밀번호 변경</h3>
       <div class="space-y-3">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 (6자리 이상)</label>
-          <input id="new-pw" type="password" placeholder="새 비밀번호 입력"
-            onkeydown="if(event.key==='Enter')changePw()"
+          <input id="new-pw" type="password" placeholder="새 비밀번호"
             class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 확인</label>
-          <input id="new-pw2" type="password" placeholder="비밀번호 재입력"
-            onkeydown="if(event.key==='Enter')changePw()"
+          <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호 확인</label>
+          <input id="new-pw-confirm" type="password" placeholder="비밀번호 확인"
+            onkeydown="if(event.key==='Enter') doChangePw()"
             class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400">
         </div>
         <p id="pw-err" class="text-xs text-red-500 hidden"></p>
-        <div class="flex gap-2 pt-1">
-          <button onclick="closePwModal()"
+        <div class="flex gap-2">
+          <button onclick="document.getElementById('pw-modal').classList.add('hidden')"
             class="flex-1 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
             취소
           </button>
-          <button onclick="changePw()"
+          <button onclick="doChangePw()"
             class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">
             변경하기
           </button>
@@ -129,22 +129,21 @@
     </div>
   </div>
 
-  <!-- ══ 헤더 ══ -->
+  <!-- ── 헤더 ── -->
   <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex items-center justify-between py-3 border-b border-gray-100">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 min-w-0">
           <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">실</div>
-          <span class="font-bold text-gray-900 text-sm">실험실 소모품 관리 시스템</span>
+          <span class="font-bold text-gray-900" style="font-size:13px; white-space:nowrap">실험실 소모품 관리 시스템</span>
         </div>
-        <div class="flex items-center gap-2">
-          <span id="header-email" class="text-xs text-gray-400 hidden sm:block"></span>
-          <button onclick="document.getElementById('pw-modal').classList.add('show')"
-            class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
+        <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+          <button onclick="document.getElementById('pw-modal').classList.remove('hidden')"
+            class="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
             비밀번호 변경
           </button>
           <button onclick="doLogout()"
-            class="px-3 py-1.5 border border-red-200 rounded-lg text-xs text-red-500 hover:bg-red-50">
+            class="px-3 py-1.5 border border-red-200 rounded-lg text-red-500 hover:bg-red-50">
             로그아웃
           </button>
         </div>
@@ -160,7 +159,7 @@
 
   <main class="max-w-6xl mx-auto px-4 py-5">
 
-    <!-- ══ 탭1: 재고 현황 ══ -->
+    <!-- 탭 1: 재고 현황 -->
     <div id="tab-inventory" class="tab-pane show">
       <div class="flex gap-2 mb-4 flex-wrap">
         <input id="inv-search" type="text" placeholder="품명 검색..."
@@ -178,7 +177,9 @@
           <option value="out">소진</option>
         </select>
         <button onclick="loadInventory()"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">새로고침</button>
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+          새로고침
+        </button>
       </div>
       <div class="grid grid-cols-3 gap-3 mb-4">
         <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -200,10 +201,10 @@
             <thead>
               <tr class="border-b border-gray-100 bg-gray-50 text-xs">
                 <th class="text-left px-4 py-3 text-gray-500 font-medium">품명</th>
-                <th class="text-left px-4 py-3 text-gray-500 font-medium">분류</th>
-                <th class="text-left px-4 py-3 text-gray-500 font-medium">단위</th>
+                <th class="text-left px-4 py-3 text-gray-500 font-medium desktop-th">분류</th>
+                <th class="text-left px-4 py-3 text-gray-500 font-medium desktop-th">단위</th>
                 <th class="text-right px-4 py-3 text-gray-500 font-medium">현재고</th>
-                <th class="text-right px-4 py-3 text-gray-500 font-medium">최소재고</th>
+                <th class="text-right px-4 py-3 text-gray-500 font-medium desktop-th">최소재고</th>
                 <th class="text-center px-4 py-3 text-gray-500 font-medium">상태</th>
                 <th class="text-center px-4 py-3 text-gray-500 font-medium">관리</th>
               </tr>
@@ -216,7 +217,7 @@
       </div>
     </div>
 
-    <!-- ══ 탭2: 소모품 등록 ══ -->
+    <!-- 탭 2: 소모품 등록 -->
     <div id="tab-register" class="tab-pane">
       <div class="max-w-lg mx-auto">
         <div class="bg-white border border-gray-200 rounded-lg p-6">
@@ -240,7 +241,9 @@
                     <option>필터</option><option>기타장비</option>
                   </select>
                   <button type="button" onclick="toggleDirectCat()"
-                    class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">직접 입력</button>
+                    class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                    직접 입력
+                  </button>
                 </div>
                 <input id="reg-cat-direct" type="text" placeholder="분류 직접 입력"
                   style="display:none"
@@ -279,14 +282,16 @@
                   class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400 resize-none"></textarea>
               </div>
               <button type="submit"
-                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">등록하기</button>
+                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                등록하기
+              </button>
             </div>
           </form>
         </div>
       </div>
     </div>
 
-    <!-- ══ 탭3: 입출고 ══ -->
+    <!-- 탭 3: 입출고 -->
     <div id="tab-inout" class="tab-pane">
       <div class="max-w-lg mx-auto">
         <div class="bg-white border border-gray-200 rounded-lg p-6">
@@ -309,7 +314,9 @@
                 <div id="io-list" class="border border-gray-200 rounded-lg overflow-y-auto" style="max-height:160px">
                   <div class="px-3 py-2 text-gray-400 text-sm">로딩 중...</div>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">현재고: <span id="io-cur-stock" class="font-semibold text-gray-700">-</span></p>
+                <p class="text-xs text-gray-500 mt-1">
+                  현재고: <span id="io-cur-stock" class="font-semibold text-gray-700">-</span>
+                </p>
                 <input type="hidden" id="io-item-id">
               </div>
               <div>
@@ -328,14 +335,16 @@
                   class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400">
               </div>
               <button type="submit"
-                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">등록하기</button>
+                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                등록하기
+              </button>
             </div>
           </form>
         </div>
       </div>
     </div>
 
-    <!-- ══ 탭4: 거래 내역 ══ -->
+    <!-- 탭 4: 거래 내역 -->
     <div id="tab-history" class="tab-pane">
       <div class="flex gap-2 mb-4 flex-wrap">
         <input id="hist-search" type="text" placeholder="품명 검색..."
@@ -348,7 +357,9 @@
           <option value="out">출고</option>
         </select>
         <button onclick="loadHistory()"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">새로고침</button>
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+          새로고침
+        </button>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div class="overflow-x-auto">
@@ -359,391 +370,4 @@
                 <th class="text-left px-4 py-3 text-gray-500 font-medium">품명</th>
                 <th class="text-center px-4 py-3 text-gray-500 font-medium">유형</th>
                 <th class="text-right px-4 py-3 text-gray-500 font-medium">수량</th>
-                <th class="text-right px-4 py-3 text-gray-500 font-medium">처리 후 재고</th>
-                <th class="text-left px-4 py-3 text-gray-500 font-medium">담당자</th>
-                <th class="text-left px-4 py-3 text-gray-500 font-medium">비고</th>
-              </tr>
-            </thead>
-            <tbody id="hist-body">
-              <tr><td colspan="7" class="text-center py-10 text-gray-400">로딩 중...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <div id="toast"></div>
-
-  <script>
-    var SUPA_URL = 'https://hjtfrbwakcjpqcrztpij.supabase.co';
-    var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqdGZyYndha2NqcHFjcnp0cGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NDYxNTUsImV4cCI6MjA5NTUyMjE1NX0.8d8bkHFYFV8BrR4kR-OHg3NiOTqBiXDPdeTM5q513RA';
-    var db = supabase.createClient(SUPA_URL, SUPA_KEY);
-
-    var allItems   = [];
-    var allHistory = [];
-    var inoutItems = [];
-    var selItem    = null;
-    var directCatOn = false;
-
-    // ── 로그인 ──
-    async function doLogin() {
-      var email = document.getElementById('login-email').value.trim();
-      var pw    = document.getElementById('login-pw').value;
-      var errEl = document.getElementById('login-err');
-      errEl.classList.add('hidden');
-      if (!email || !pw) { errEl.textContent='이메일과 비밀번호를 입력해주세요.'; errEl.classList.remove('hidden'); return; }
-      var r = await db.auth.signInWithPassword({ email: email, password: pw });
-      if (r.error) { errEl.textContent='로그인 실패: ' + r.error.message; errEl.classList.remove('hidden'); return; }
-      onLoggedIn(r.data.user);
-    }
-
-    function onLoggedIn(user) {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('header-email').textContent = user.email;
-      loadInventory();
-    }
-
-    async function doLogout() {
-      await db.auth.signOut();
-      document.getElementById('login-screen').style.display = 'flex';
-      document.getElementById('login-pw').value = '';
-      document.getElementById('login-email').value = '';
-    }
-
-    // ── 비밀번호 변경 ──
-    function closePwModal(e) {
-      if (e && e.target !== document.getElementById('pw-modal')) return;
-      document.getElementById('pw-modal').classList.remove('show');
-      document.getElementById('new-pw').value = '';
-      document.getElementById('new-pw2').value = '';
-      document.getElementById('pw-err').classList.add('hidden');
-    }
-
-    async function changePw() {
-      var p1 = document.getElementById('new-pw').value;
-      var p2 = document.getElementById('new-pw2').value;
-      var errEl = document.getElementById('pw-err');
-      errEl.classList.add('hidden');
-      if (p1.length < 6) { errEl.textContent='비밀번호는 6자리 이상이어야 합니다.'; errEl.classList.remove('hidden'); return; }
-      if (p1 !== p2)     { errEl.textContent='비밀번호가 일치하지 않습니다.';       errEl.classList.remove('hidden'); return; }
-      var r = await db.auth.updateUser({ password: p1 });
-      if (r.error) { errEl.textContent='변경 실패: ' + r.error.message; errEl.classList.remove('hidden'); return; }
-      document.getElementById('pw-modal').classList.remove('show');
-      document.getElementById('new-pw').value = '';
-      document.getElementById('new-pw2').value = '';
-      toast('비밀번호가 변경되었습니다!', 'ok');
-    }
-
-    // ── 탭 전환 ──
-    function showTab(name) {
-      ['inventory','register','inout','history'].forEach(function(t) {
-        document.getElementById('tab-' + t).classList.remove('show');
-        document.getElementById('nav-' + t).classList.remove('active');
-      });
-      document.getElementById('tab-' + name).classList.add('show');
-      document.getElementById('nav-' + name).classList.add('active');
-      if (name === 'inout')   loadItemsForInOut();
-      if (name === 'history') loadHistory();
-    }
-
-    // ── 재고 현황 ──
-    async function loadInventory() {
-      document.getElementById('inv-body').innerHTML =
-        '<tr><td colspan="7" class="text-center py-10 text-gray-400">로딩 중...</td></tr>';
-      var r = await db.from('items').select('*').order('name');
-      if (r.error) { toast('로드 실패: ' + r.error.message, 'err'); return; }
-      allItems = r.data || [];
-      rebuildCatFilter();
-      renderInventory(allItems);
-    }
-
-    function rebuildCatFilter() {
-      var cats = [];
-      allItems.forEach(function(i) { if (i.category && cats.indexOf(i.category)<0) cats.push(i.category); });
-      cats.sort();
-      var sel = document.getElementById('inv-cat');
-      var cur = sel.value;
-      sel.innerHTML = '<option value="">전체 분류</option>' +
-        cats.map(function(c){ return '<option>' + h(c) + '</option>'; }).join('');
-      if (cur) sel.value = cur;
-    }
-
-    function itemStatus(item) {
-      var s = item.current_stock != null ? item.current_stock : 0;
-      var m = item.min_stock     != null ? item.min_stock     : 0;
-      if (s <= 0) return 'out';
-      if (s <= m) return 'low';
-      return 'ok';
-    }
-
-    function renderInventory(items) {
-      document.getElementById('stat-total').textContent = items.length;
-      document.getElementById('stat-low').textContent   = items.filter(function(i){ return itemStatus(i)==='low'; }).length;
-      document.getElementById('stat-out').textContent   = items.filter(function(i){ return itemStatus(i)==='out'; }).length;
-      if (!items.length) {
-        document.getElementById('inv-body').innerHTML =
-          '<tr><td colspan="7" class="text-center py-10 text-gray-400">등록된 소모품이 없습니다.</td></tr>';
-        return;
-      }
-      document.getElementById('inv-body').innerHTML = items.map(function(item) {
-        var s  = item.current_stock != null ? item.current_stock : 0;
-        var m  = item.min_stock     != null ? item.min_stock     : 0;
-        var st = itemStatus(item);
-        var badge = st==='out' ? '<span class="badge badge-out">소진</span>'
-                  : st==='low' ? '<span class="badge badge-low">부족</span>'
-                  :              '<span class="badge badge-ok">정상</span>';
-        var sc = st==='out' ? 'color:#ef4444;font-weight:600'
-               : st==='low' ? 'color:#f59e0b;font-weight:600' : '';
-        return '<tr style="border-bottom:1px solid #f9fafb">' +
-          '<td class="px-4 py-3" style="font-weight:500;color:#111827">' + h(item.name) + '</td>' +
-          '<td class="px-4 py-3" style="color:#6b7280">' + h(item.category||'-') + '</td>' +
-          '<td class="px-4 py-3" style="color:#6b7280">' + h(item.unit||'-') + '</td>' +
-          '<td class="px-4 py-3" style="text-align:right;' + sc + '">' + s + '</td>' +
-          '<td class="px-4 py-3" style="text-align:right;color:#6b7280">' + m + '</td>' +
-          '<td class="px-4 py-3" style="text-align:center">' + badge + '</td>' +
-          '<td class="px-4 py-3" style="text-align:center">' +
-            '<button class="del-btn" data-id="' + h(item.id) + '" data-name="' + h(item.name) + '" ' +
-            'style="color:#f87171;font-size:12px;background:none;border:none;cursor:pointer">삭제</button>' +
-          '</td>' +
-        '</tr>';
-      }).join('');
-    }
-
-    function filterInventory() {
-      var q  = document.getElementById('inv-search').value.toLowerCase();
-      var c  = document.getElementById('inv-cat').value;
-      var st = document.getElementById('inv-status').value;
-      renderInventory(allItems.filter(function(i) {
-        if (q  && !i.name.toLowerCase().includes(q)) return false;
-        if (c  && i.category !== c)                  return false;
-        if (st && itemStatus(i) !== st)               return false;
-        return true;
-      }));
-    }
-
-    async function deleteItem(id, name) {
-      if (!confirm('"' + name + '"을(를) 삭제하시겠습니까?')) return;
-      var r = await db.from('items').delete().eq('id', id);
-      if (r.error) { toast('삭제 실패: ' + r.error.message, 'err'); return; }
-      toast('"' + name + '" 삭제 완료', 'ok');
-      loadInventory();
-    }
-
-    document.addEventListener('click', function(e) {
-      var btn = e.target.closest('.del-btn');
-      if (btn) deleteItem(btn.dataset.id, btn.dataset.name);
-    });
-
-    // ── 소모품 등록 ──
-    function toggleDirectCat() {
-      directCatOn = !directCatOn;
-      document.getElementById('reg-cat-direct').style.display = directCatOn ? 'block' : 'none';
-    }
-
-    async function handleRegister(e) {
-      e.preventDefault();
-      var name     = document.getElementById('reg-name').value.trim();
-      var catD     = document.getElementById('reg-cat-direct').value.trim();
-      var category = catD || document.getElementById('reg-cat').value;
-      var unitD    = document.getElementById('reg-unit-direct').value.trim();
-      var unit     = unitD || document.getElementById('reg-unit').value;
-      var initS    = parseInt(document.getElementById('reg-init').value) || 0;
-      var minS     = parseInt(document.getElementById('reg-min').value)  || 0;
-      var note     = document.getElementById('reg-note').value.trim();
-      if (!name) { toast('품명을 입력해주세요.', 'err'); return; }
-      var r = await db.from('items').insert([{
-        name: name, category: category, unit: unit,
-        current_stock: initS, min_stock: minS, note: note
-      }]).select();
-      if (r.error) { toast('등록 실패: ' + r.error.message, 'err'); return; }
-      if (initS > 0 && r.data && r.data[0]) {
-        await db.from('transactions').insert([{
-          item_id: r.data[0].id, item_name: name,
-          type: 'in', quantity: initS, stock_after: initS,
-          handler: '초기등록', note: '초기 재고'
-        }]);
-      }
-      toast('"' + name + '" 등록 완료!', 'ok');
-      document.getElementById('reg-form').reset();
-      document.getElementById('reg-cat-direct').style.display = 'none';
-      directCatOn = false;
-    }
-
-    // ── 입출고 ──
-    async function loadItemsForInOut() {
-      var r = await db.from('items').select('*').order('name');
-      if (r.error) return;
-      inoutItems = r.data || [];
-      renderInOutList(inoutItems);
-    }
-
-    function setTxType(type) {
-      document.getElementById('tx-type').value = type;
-      document.getElementById('btn-in').className  = 'type-btn' + (type==='in'  ? ' in-on'  : '');
-      document.getElementById('btn-out').className = 'type-btn' + (type==='out' ? ' out-on' : '');
-    }
-
-    function filterInOutItems() {
-      var q = document.getElementById('io-search').value.toLowerCase();
-      renderInOutList(q ? inoutItems.filter(function(i){ return i.name.toLowerCase().includes(q); }) : inoutItems);
-    }
-
-    function renderInOutList(items) {
-      if (!items.length) {
-        document.getElementById('io-list').innerHTML = '<div class="px-3 py-2 text-gray-400 text-sm">검색 결과 없음</div>';
-        return;
-      }
-      document.getElementById('io-list').innerHTML = items.map(function(item) {
-        var s  = item.current_stock != null ? item.current_stock : 0;
-        var on = selItem && selItem.id === item.id;
-        return '<div class="irow' + (on?' sel':'') + '" data-id="' + h(item.id) + '">' +
-          h(item.name) +
-          ' <span style="font-size:11px;color:#9ca3af">[현재고: ' + s + ' ' + h(item.unit||'') + ']</span>' +
-        '</div>';
-      }).join('');
-    }
-
-    document.getElementById('io-list').addEventListener('click', function(e) {
-      var row = e.target.closest('.irow');
-      if (!row) return;
-      selItem = inoutItems.find(function(i){ return i.id === row.dataset.id; });
-      if (!selItem) return;
-      document.getElementById('io-item-id').value = selItem.id;
-      var s = selItem.current_stock != null ? selItem.current_stock : 0;
-      document.getElementById('io-cur-stock').textContent = s + ' ' + (selItem.unit||'');
-      filterInOutItems();
-    });
-
-    async function handleInOut(e) {
-      e.preventDefault();
-      if (!selItem) { toast('품목을 선택해주세요.', 'err'); return; }
-      var type    = document.getElementById('tx-type').value;
-      var qty     = parseInt(document.getElementById('io-qty').value);
-      var handler = document.getElementById('io-handler').value.trim();
-      var note    = document.getElementById('io-note').value.trim();
-      var curS    = selItem.current_stock != null ? selItem.current_stock : 0;
-      var afterS  = type === 'in' ? curS + qty : curS - qty;
-      if (type === 'out' && afterS < 0) { toast('재고 부족! 현재 재고: ' + curS, 'err'); return; }
-
-      var txR = await db.from('transactions').insert([{
-        item_id: selItem.id, item_name: selItem.name,
-        type: type, quantity: qty, stock_after: afterS,
-        handler: handler || null, note: note || null
-      }]);
-      if (txR.error) { toast('등록 실패: ' + txR.error.message, 'err'); return; }
-
-      var upR = await db.from('items').update({ current_stock: afterS }).eq('id', selItem.id);
-      if (upR.error) { toast('재고 업데이트 실패: ' + upR.error.message, 'err'); return; }
-
-      selItem.current_stock = afterS;
-      var idx = allItems.findIndex(function(i){ return i.id === selItem.id; });
-      if (idx >= 0) allItems[idx].current_stock = afterS;
-
-      toast((type==='in'?'입고':'출고') + ' 완료! ' + selItem.name + ' ' + qty + (selItem.unit||''), 'ok');
-      document.getElementById('io-cur-stock').textContent = afterS + ' ' + (selItem.unit||'');
-      document.getElementById('io-qty').value     = 1;
-      document.getElementById('io-handler').value = '';
-      document.getElementById('io-note').value    = '';
-      filterInOutItems();
-    }
-
-    // ── 거래 내역 ──
-    async function loadHistory() {
-      document.getElementById('hist-body').innerHTML =
-        '<tr><td colspan="7" class="text-center py-10 text-gray-400">로딩 중...</td></tr>';
-      if (!allItems.length) {
-        var ir = await db.from('items').select('*');
-        if (!ir.error) allItems = ir.data || [];
-      }
-      var r = await db.from('transactions').select('*').order('created_at', { ascending: false }).limit(300);
-      if (r.error) {
-        toast('거래 내역 로드 실패: ' + r.error.message, 'err');
-        document.getElementById('hist-body').innerHTML =
-          '<tr><td colspan="7" class="text-center py-10 text-red-400">' + h(r.error.message) + '</td></tr>';
-        return;
-      }
-      allHistory = (r.data || []).map(function(tx) {
-        var iid  = tx.item_id;
-        var item = allItems.find(function(i){ return i.id === iid; });
-        return Object.assign({}, tx, {
-          _name: tx.item_name || (item ? item.name : '-'),
-          _unit: item ? (item.unit||'') : ''
-        });
-      });
-      renderHistory(allHistory);
-    }
-
-    function filterHistory() {
-      var q  = document.getElementById('hist-search').value.toLowerCase();
-      var tp = document.getElementById('hist-type').value;
-      renderHistory(allHistory.filter(function(t) {
-        if (q  && !t._name.toLowerCase().includes(q)) return false;
-        if (tp && t.type !== tp)                       return false;
-        return true;
-      }));
-    }
-
-    function renderHistory(list) {
-      if (!list.length) {
-        document.getElementById('hist-body').innerHTML =
-          '<tr><td colspan="7" class="text-center py-10 text-gray-400">거래 내역이 없습니다.</td></tr>';
-        return;
-      }
-      document.getElementById('hist-body').innerHTML = list.map(function(tx) {
-        var dtRaw = tx.created_at || '';
-        var dt = dtRaw ? new Date(dtRaw).toLocaleString('ko-KR',{
-          year:'numeric',month:'2-digit',day:'2-digit',
-          hour:'2-digit',minute:'2-digit'
-        }) : '-';
-        var typeBadge = tx.type==='in'
-          ? '<span style="color:#2563eb;font-weight:500">입고</span>'
-          : '<span style="color:#ef4444;font-weight:500">출고</span>';
-        var qty = tx.type==='in' ? ('+'+tx.quantity) : ('-'+tx.quantity);
-        var qc  = tx.type==='in' ? '#2563eb' : '#ef4444';
-        var afterS = tx.stock_after != null ? tx.stock_after : '-';
-        return '<tr style="border-bottom:1px solid #f9fafb">' +
-          '<td class="px-4 py-3" style="font-size:12px;color:#9ca3af">' + dt + '</td>' +
-          '<td class="px-4 py-3" style="font-weight:500;color:#111827">' + h(tx._name) + '</td>' +
-          '<td class="px-4 py-3" style="text-align:center">' + typeBadge + '</td>' +
-          '<td class="px-4 py-3" style="text-align:right;font-weight:600;color:' + qc + '">' + qty + '</td>' +
-          '<td class="px-4 py-3" style="text-align:right;color:#374151">' + afterS + '</td>' +
-          '<td class="px-4 py-3" style="color:#6b7280">' + h(tx.handler||'-') + '</td>' +
-          '<td class="px-4 py-3" style="font-size:12px;color:#9ca3af">' + h(tx.note||'-') + '</td>' +
-        '</tr>';
-      }).join('');
-    }
-
-    // ── 유틸 ──
-    function h(s) {
-      return String(s||'')
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-    var _toastTimer = null;
-    function toast(msg, type) {
-      var el = document.getElementById('toast');
-      el.textContent = msg;
-      el.style.background = type==='err' ? '#ef4444' : '#22c55e';
-      el.style.opacity = '1';
-      if (_toastTimer) clearTimeout(_toastTimer);
-      _toastTimer = setTimeout(function(){ el.style.opacity='0'; }, 3000);
-    }
-
-    // ── 초기화: 세션 확인 후 로그인 판단 ──
-    window.addEventListener('DOMContentLoaded', async function() {
-      var s = await db.auth.getSession();
-      if (s.data && s.data.session && s.data.session.user) {
-        onLoggedIn(s.data.session.user);
-      }
-      // 세션 변화 감지
-      db.auth.onAuthStateChange(function(event, session) {
-        if (session && session.user) {
-          onLoggedIn(session.user);
-        }
-      });
-    });
-  </script>
-</body>
-</html>
+                <th class="text-right px-4 py-3 text-gray-500 font-medium desktop
